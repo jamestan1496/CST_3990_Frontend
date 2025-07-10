@@ -852,39 +852,39 @@
                 </div>
 
                 <!-- Clustering Results Modal -->
-                    <div v-if="showClustering" class="modal">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h3>AI Clustering Results</h3>
-                                <button class="close-btn" @click="showClustering = false">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
+                <div v-if="showClustering" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>AI Clustering Results</h3>
+                            <button class="close-btn" @click="showClustering = false">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                         
-                            <div v-if="clusteringResults.length > 0" class="cluster-grid">
-                                <div v-for="cluster in clusteringResults" :key="cluster.name" class="cluster-card">
-                                    <div class="cluster-header">
-                                        <h4>{{ formatClusterName(cluster.name) }}</h4>
-                                        <span class="cluster-size">{{ cluster.size }} members</span>
-                                    </div>
+                        <div v-if="clusteringResults.length > 0" class="cluster-grid">
+                            <div v-for="cluster in clusteringResults" :key="cluster.name" class="cluster-card">
+                                <div class="cluster-header">
+                                    <h4>{{ formatClusterName(cluster.name) }}</h4>
+                                    <span class="cluster-size">{{ cluster.size }} members</span>
+                                </div>
                                 
-                                    <div class="cluster-members">
-                                        <span v-for="member in cluster.members" :key="member.id" class="member-badge">
-                                            {{ member.name }}
-                                        </span>
-                                    </div>
+                                <div class="cluster-members">
+                                    <span v-for="member in cluster.members" :key="member.id" class="member-badge">
+                                        {{ member.name }}
+                                    </span>
                                 </div>
                             </div>
+                        </div>
                         
-                            <div v-else class="empty-state">
-                                <i class="fas fa-layer-group"></i>
-                                <h3>No clustering results</h3>
-                                <p>Run clustering to see results here</p>
-                            </div>
+                        <div v-else class="empty-state">
+                            <i class="fas fa-layer-group"></i>
+                            <h3>No clustering results</h3>
+                            <p>Run clustering to see results here</p>
                         </div>
                     </div>
                 </div>
-                <div v-if="showDeleteConfirm" class="modal">
+            </div>
+            <div v-if="showDeleteConfirm" class="modal">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h3>Confirm Delete</h3>
