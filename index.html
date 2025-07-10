@@ -1204,146 +1204,179 @@
                         this.loadProfile();
                     }
                 },
+
+                validateEventDateTime(date, time) {
+                    const now = new Date();
+                    const eventDate = new Date(date);
+    
+                    // Check if date is valid
+                    if (isNaN(eventDate.getTime())) {
+                        return { isValid: false, error: 'Invalid date format' };
+                    }
+    
+                    // Validate time format if provided
+                    if (time && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
+                        return { isValid: false, error: 'Invalid time format. Use HH:MM format' };
+                    }
+    
+                    // Create full datetime for comparison
+                    const [hours, minutes] = time ? time.split(':').map(Number) : [23, 59];
+                    const eventDateTime = new Date(eventDate);
+                    eventDateTime.setHours(hours, minutes, 0, 0);
+    
+                    // Event must be in the future (not just today, but actually in the future)
+                    if (eventDateTime <= now) {
+                        return { isValid: false, error: 'Event date and time must be in the future' };
+                    }
+    
+                    // Additional check: event must be at least 1 hour from now
+                    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+                    if (eventDateTime < oneHourFromNow) {
+                        return { isValid: false, error: 'Event must be scheduled at least 1 hour in advance' };
+                    }
+    
+                    return { isValid: true };
+                },
                 
                 async createEvent() {
-    this.authLoading = true;
-    try {
-        // Validate sessions don't have conflicts
-        const hasConflicts = this.eventForm.sessions.some(session => session.conflict);
-        if (hasConflicts) {
-            this.showNotification('Please resolve session conflicts before creating the event', 'error');
-            this.authLoading = false;
-            return;
-        }
+                    this.authLoading = true;
+                    try {
+                        // Validate sessions don't have conflicts
+                        const hasConflicts = this.eventForm.sessions.some(session => session.conflict);
+                        if (hasConflicts) {
+                            this.showNotification('Please resolve session conflicts before creating the event', 'error');
+                            this.authLoading = false;
+                            return;
+                        }
 
-        // Get the auth token
-        const token = localStorage.getItem('eventhive_token');
-        if (!token) {
-            throw new Error('No authentication token found. Please log in again.');
-        }
+                        // Get the auth token
+                        const token = localStorage.getItem('eventhive_token');
+                        if (!token) {
+                            throw new Error('No authentication token found. Please log in again.');
+                        }
 
-        // Verify user role from token
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            if (payload.role !== 'organizer') {
-                throw new Error('Only organizers can create events');
-            }
-        } catch (parseError) {
-            throw new Error('Invalid authentication token. Please log in again.');
-        }
+                        // Verify user role from token
+                    try {
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        if (payload.role !== 'organizer') {
+                            throw new Error('Only organizers can create events');
+                        }
+                    } catch (parseError) {
+                        throw new Error('Invalid authentication token. Please log in again.');
+                    }
 
-        // Create FormData object
-        const formData = new FormData();
+                    // Create FormData object
+                    const formData = new FormData();
         
-        // Add required fields
-        formData.append('title', this.eventForm.title || '');
-        formData.append('description', this.eventForm.description || '');
-        formData.append('date', this.eventForm.date || '');
-        formData.append('time', this.eventForm.time || '');
-        formData.append('location', this.eventForm.location || '');
+                    // Add required fields
+                    formData.append('title', this.eventForm.title || '');
+                    formData.append('description', this.eventForm.description || '');
+                    formData.append('date', this.eventForm.date || '');
+                    formData.append('time', this.eventForm.time || '');
+                    formData.append('location', this.eventForm.location || '');
         
-        // Add optional fields
-        if (this.eventForm.maxAttendees) {
-            formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
-        }
+                    // Add optional fields
+                    if (this.eventForm.maxAttendees) {
+                        formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
+                    }
         
-        // Add sessions (must be JSON string for FormData)
-        if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
-            formData.append('sessions', JSON.stringify(this.eventForm.sessions));
-        }
+                    // Add sessions (must be JSON string for FormData)
+                    if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
+                        formData.append('sessions', JSON.stringify(this.eventForm.sessions));
+                    }
         
-        // Add image if present (currently commented out in your HTML, but ready for future use)
-        if (this.eventForm.image instanceof File) {
-            formData.append('image', this.eventForm.image);
-        }
+                    // Add image if present (currently commented out in your HTML, but ready for future use)
+                    if (this.eventForm.image instanceof File) {
+                        formData.append('image', this.eventForm.image);
+                    }
 
-        console.log('Sending event creation request with FormData...');
-        console.log('Form data contents:');
-        for (let [key, value] of formData.entries()) {
-            console.log(key, typeof value === 'string' ? value : 'File object');
-        }
+                    console.log('Sending event creation request with FormData...');
+                    console.log('Form data contents:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log(key, typeof value === 'string' ? value : 'File object');
+                    }
 
-        // Send request using FormData
-        const response = await axios.post(`${this.apiUrl}/events`, formData, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                // Don't set Content-Type - let browser set it with boundary for FormData
-            }
-        });
+                    // Send request using FormData
+                    const response = await axios.post(`${this.apiUrl}/events`, formData, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            // Don't set Content-Type - let browser set it with boundary for FormData
+                        }
+                    });
         
-        console.log('Event created successfully:', response.data);
+                    console.log('Event created successfully:', response.data);
         
-        this.showCreateEvent = false;
-        this.resetEventForm();
-        await this.loadDashboardData();
+                        this.showCreateEvent = false;
+                        this.resetEventForm();
+                        await this.loadDashboardData();
         
-        this.showNotification('Event created successfully with optimized schedule!', 'success');
+                        this.showNotification('Event created successfully with optimized schedule!', 'success');
         
-    } catch (error) {
-        console.error('Event creation error:', error);
+                    } catch (error) {
+                    console.error('Event creation error:', error);
         
-        if (error.response) {
-            // Server responded with error
-            console.error('Server error response:', error.response.data);
-            this.showNotification(error.response.data?.error || 'Failed to create event', 'error');
-        } else if (error.request) {
-            // Request made but no response
-            console.error('No response received:', error.request);
-            this.showNotification('No response from server. Please check if the server is running.', 'error');
-        } else {
-            // Error in request setup
-            console.error('Request setup error:', error.message);
-            this.showNotification(error.message || 'Failed to create event', 'error');
-        }
-    } finally {
-        this.authLoading = false;
-    }
-},
-// Image upload handling
-handleImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+                    if (error.response) {
+                        // Server responded with error
+                        console.error('Server error response:', error.response.data);
+                        this.showNotification(error.response.data?.error || 'Failed to create event', 'error');
+                    } else if (error.request) {
+                        // Request made but no response
+                        console.error('No response received:', error.request);
+                        this.showNotification('No response from server. Please check if the server is running.', 'error');
+                    } else {
+                        // Error in request setup
+                        console.error('Request setup error:', error.message);
+                        this.showNotification(error.message || 'Failed to create event', 'error');
+                        }
+                    } finally {
+                        this.authLoading = false;
+                    }
+                },
+                // Image upload handling
+                handleImageUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
     
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-        this.showNotification('Please select a valid image file', 'error');
-        event.target.value = ''; // Clear the input
-        return;
-    }
+                    // Validate file type
+                    if (!file.type.startsWith('image/')) {
+                        this.showNotification('Please select a valid image file', 'error');
+                        event.target.value = ''; // Clear the input
+                        return;
+                    }
     
-    // Validate file size (limit to 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-    if (file.size > maxSize) {
-        this.showNotification('Image file must be less than 5MB', 'error');
-        event.target.value = ''; // Clear the input
-        return;
-    }
+                    // Validate file size (limit to 5MB)
+                    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+                    if (file.size > maxSize) {
+                        this.showNotification('Image file must be less than 5MB', 'error');
+                        event.target.value = ''; // Clear the input
+                        return;
+                    }
     
-    // Store the file for upload
-    this.eventForm.image = file;
+                    // Store the file for upload
+                    this.eventForm.image = file;
     
-    // Create preview URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        this.eventForm.imagePreview = e.target.result;
-    };
-    reader.readAsDataURL(file);
+                    // Create preview URL
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.eventForm.imagePreview = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
     
-    console.log('Image selected:', file.name, 'Size:', Math.round(file.size / 1024) + 'KB');
-    this.showNotification('Image selected successfully!', 'success');
-},
+                    console.log('Image selected:', file.name, 'Size:', Math.round(file.size / 1024) + 'KB');
+                    this.showNotification('Image selected successfully!', 'success');
+                },
 
-removeImage() {
-    this.eventForm.image = null;
-    this.eventForm.imagePreview = null;
+                removeImage() {
+                    this.eventForm.image = null;
+                    this.eventForm.imagePreview = null;
     
-    // Clear the file input
-    if (this.$refs.imageInput) {
-        this.$refs.imageInput.value = '';
-    }
+                    // Clear the file input
+                    if (this.$refs.imageInput) {
+                        this.$refs.imageInput.value = '';
+                    }
     
-    this.showNotification('Image removed', 'info');
-},
+                    this.showNotification('Image removed', 'info');
+                },
                 
                 async loadEvents() {
                     try {
