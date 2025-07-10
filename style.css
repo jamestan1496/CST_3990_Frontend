@@ -1188,3 +1188,127 @@
             background: rgba(255, 255, 255, 0.1);
             color: white;
         }
+
+/* Delete confirmation modal styles */
+.delete-confirmation {
+    text-align: center;
+    padding: 1rem;
+}
+
+.delete-confirmation .warning-icon {
+    font-size: 3rem;
+    color: #ff6b6b;
+    margin-bottom: 1rem;
+}
+
+.delete-confirmation h4 {
+    color: #333;
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+}
+
+.delete-confirmation .event-details {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    text-align: left;
+}
+
+.delete-confirmation .event-details p {
+    margin: 0.5rem 0;
+    color: #555;
+}
+
+.delete-confirmation .warning-text {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    text-align: left;
+}
+
+.delete-confirmation .warning-text p {
+    margin: 0.5rem 0;
+    color: #856404;
+}
+
+.delete-confirmation .warning-text ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.delete-confirmation .warning-text li {
+    margin: 0.25rem 0;
+    color: #856404;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.modal-actions .btn {
+    min-width: 120px;
+}
+
+/* Danger button styles */
+.btn-danger {
+    background: linear-gradient(135deg, #ff6b6b, #e74c3c);
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+}
+
+.btn-danger:active {
+    transform: translateY(0);
+}
+
+.btn-danger:disabled {
+    background: #bbb;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Loading spinner for delete button */
+.btn-danger .loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Make delete button stand out in event actions */
+.event-actions .btn-danger {
+    margin-left: auto; /* Push delete button to the right */
+}
+
+/* Responsive design for modal actions */
+@media (max-width: 768px) {
+    .modal-actions {
+        flex-direction: column;
+    }
+    
+    .modal-actions .btn {
+        width: 100%;
+    }
+}
