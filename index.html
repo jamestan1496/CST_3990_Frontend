@@ -481,69 +481,115 @@
                     </div>
                 </div>
 
-                <!-- Event Details Modal -->
-                <div v-if="selectedEvent.image" class="event-image-container">
-                    <div class="image-wrapper">
-                <!-- Loading placeholder -->
-                <div class="image-loading" v-show="!imageLoaded && !imageError">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <span>Loading image...</span>
+                <!-- Event Details Modal - Fixed Null Checking -->
+<div v-if="selectedEvent && selectedEvent._id" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>{{ selectedEvent ? selectedEvent.title : 'Loading...' }}</h3>
+            <button class="close-btn" @click="selectedEvent = null">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- Image Display with Null Checking -->
+        <div v-if="selectedEvent && selectedEvent.image" class="event-image-container" style="margin: 1rem 0;">
+            <!-- Show image if not in error state -->
+            <img 
+                v-if="!imageError"
+                :src="getEventImageUrl(selectedEvent.image)" 
+                :alt="selectedEvent ? selectedEvent.title : 'Event Image'"
+                style="width: 100%; max-width: 400px; height: 200px; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                @error="handleImageError"
+                @load="handleImageLoad"
+            >
+            
+            <!-- Show placeholder if image failed to load -->
+            <div v-if="imageError" class="image-placeholder" style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                max-width: 400px;
+                height: 200px;
+                background: #f8f9fa;
+                border: 2px dashed #dee2e6;
+                border-radius: 10px;
+                color: #6c757d;
+                flex-direction: column;
+                gap: 0.5rem;
+            ">
+                <i class="fas fa-image" style="font-size: 2rem;"></i>
+                <span>Image not available</span>
+            </div>
+        </div>
+
+        <!-- Event Meta with Null Checking -->
+        <div v-if="selectedEvent" class="event-meta">
+            <span><i class="fas fa-calendar"></i> {{ formatDate(selectedEvent.date) }}</span>
+            <span><i class="fas fa-clock"></i> {{ selectedEvent.time }}</span>
+            <span><i class="fas fa-map-marker-alt"></i> {{ selectedEvent.location }}</span>
+        </div>
+        
+        <!-- Event Status with Null Checking -->
+        <div v-if="selectedEvent" style="margin: 1rem 0;">
+            <span class="event-status" :class="'status-' + selectedEvent.status">
+                {{ selectedEvent.status }}
+            </span>
+        </div>
+        
+        <!-- Event Description with Null Checking -->
+        <p v-if="selectedEvent && selectedEvent.description" style="margin: 1rem 0;">
+            {{ selectedEvent.description }}
+        </p>
+        
+        <!-- Sessions with Null Checking -->
+        <div v-if="selectedEvent && selectedEvent.sessions && selectedEvent.sessions.length > 0">
+            <h4 style="margin: 1.5rem 0 1rem 0;">Sessions</h4>
+            <div class="sessions-list">
+                <div v-for="session in selectedEvent.sessions" :key="session.title" class="session-card">
+                    <div class="session-header">
+                        <h5>{{ session.title }}</h5>
+                        <span class="session-time">{{ session.startTime }} - {{ session.endTime }}</span>
+                    </div>
+                    <div class="session-speaker" v-if="session.speaker">by {{ session.speaker }}</div>
+                    <div class="session-description" v-if="session.description">{{ session.description }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- QR Code Section with Null Checking -->
+        <div v-if="currentUser && selectedEvent && currentUser.role === 'attendee' && isRegistered(selectedEvent)" class="qr-code">
+            <h4>Your QR Code</h4>
+            <div class="qr-container">
+                <!-- QR Code will be generated here -->
+                <canvas :id="'qr-canvas-' + selectedEvent._id" style="display: none;"></canvas>
+                
+                <!-- Fallback QR display -->
+                <div v-if="showQRFallback && fallbackQRUrl" class="qr-fallback">
+                    <img :src="fallbackQRUrl" alt="QR Code" style="width: 200px; height: 200px; border-radius: 10px;">
                 </div>
                 
-                                <!-- Actual image -->
-                                <img 
-                                    :src="getEventImageUrl(selectedEvent.image)" 
-                                    :alt="selectedEvent.title"
-                                    class="event-image"
-                                    @error="handleImageError"
-                                    @load="handleImageLoad"
-                                    v-show="imageLoaded && !imageError"
-                                >
-                                
-                                <!-- Error placeholder -->
-                                <div v-if="imageError" class="image-placeholder">
-                                    <i class="fas fa-image"></i>
-                                    <span>Image not available</span>
-                                    <small>{{ selectedEvent.image }}</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="event-meta">
-                            <span><i class="fas fa-calendar"></i> {{ formatDate(selectedEvent.date) }}</span>
-                            <span><i class="fas fa-clock"></i> {{ selectedEvent.time }}</span>
-                            <span><i class="fas fa-map-marker-alt"></i> {{ selectedEvent.location }}</span>
-                        </div>
-                        
-                        <div style="margin: 1rem 0;">
-                            <span class="event-status" :class="'status-' + selectedEvent.status">
-                                {{ selectedEvent.status }}
-                            </span>
-                        </div>
-                        
-                        <p style="margin: 1rem 0;">{{ selectedEvent.description }}</p>
-                        
-                        <div v-if="selectedEvent.sessions && selectedEvent.sessions.length > 0">
-                            <h4 style="margin: 1.5rem 0 1rem 0;">Sessions</h4>
-                            <div class="sessions-list">
-                                <div v-for="session in selectedEvent.sessions" :key="session.title" class="session-card">
-                                    <div class="session-header">
-                                        <h5>{{ session.title }}</h5>
-                                        <span class="session-time">{{ session.startTime }} - {{ session.endTime }}</span>
-                                    </div>
-                                    <div class="session-speaker">by {{ session.speaker }}</div>
-                                    <div class="session-description">{{ session.description }}</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div v-if="currentUser.role === 'attendee' && isRegistered(selectedEvent)" class="qr-code">
-                            <h4>Your QR Code</h4>
-                            <img :src="selectedEvent.qrCode || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='" alt="QR Code" style="width: 200px; height: 200px; background: white; border: 2px solid #333; display: flex; align-items: center; justify-content: center;">
-                            <p style="font-size: 0.9rem; opacity: 0.8;">Show this QR code at the event entrance</p>
-                        </div>
-                    </div>
+                <!-- QR generation button -->
+                <div v-if="!qrCodeGenerated" class="qr-generation">
+                    <button @click="generateQRCode(selectedEvent)" class="btn btn-primary btn-small">
+                        <i class="fas fa-qrcode"></i> Generate QR Code
+                    </button>
                 </div>
+                
+                <!-- Demo copy QR data button -->
+                <div class="qr-demo-section" style="margin-top: 1rem;">
+                    <button @click="copyQRData(selectedEvent)" class="btn btn-secondary btn-small">
+                        <i class="fas fa-copy"></i> Copy QR Data (Demo)
+                    </button>
+                    <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.5rem;">
+                        <i class="fas fa-info-circle"></i> Copy this data and paste it in the organizer's QR scanner
+                    </p>
+                </div>
+            </div>
+            <p style="font-size: 0.9rem; opacity: 0.8;">Show this QR code at the event entrance</p>
+        </div>
+    </div>
+</div>
 
                 <!-- Delete Confirmation Modal -->
                 <div v-if="showDeleteConfirm" class="modal">
@@ -2326,16 +2372,87 @@
                 
                 // UI Methods
                 async viewEvent(event) {
-                    this.selectedEvent = event;
-                    this.qrCodeGenerated = false;
-                    this.showQRFallback = false;
-                    
-                    // Generate QR code for attendees who are registered
-                    if (this.currentUser.role === 'attendee' && this.isRegistered(event)) {
-                        // Try to load QR code from backend first
-                        await this.loadQRCodeFromBackend(event);
-                    }
-                },
+    try {
+        // Validate event object
+        if (!event || !event._id) {
+            console.error('Invalid event object:', event);
+            this.showNotification('Invalid event selected', 'error');
+            return;
+        }
+
+        console.log('Opening event details for:', event.title);
+
+        // Reset image and QR state
+        this.imageLoaded = false;
+        this.imageError = false;
+        this.qrCodeGenerated = false;
+        this.showQRFallback = false;
+
+        // Set selected event
+        this.selectedEvent = { ...event }; // Create a copy to avoid reference issues
+
+        // Debug image URL if image exists
+        if (event.image) {
+            console.log('Event has image:', event.image);
+            const imageUrl = this.getEventImageUrl(event.image);
+            console.log('Constructed image URL:', imageUrl);
+        }
+
+        // Generate QR code for attendees who are registered
+        if (this.currentUser?.role === 'attendee' && this.isRegistered(event)) {
+            try {
+                await this.loadQRCodeFromBackend(event);
+            } catch (error) {
+                console.error('QR code loading failed:', error);
+                // QR failure shouldn't prevent modal from opening
+            }
+        }
+
+    } catch (error) {
+        console.error('Error opening event details:', error);
+        this.showNotification('Error opening event details', 'error');
+        
+        // Reset state on error
+        this.selectedEvent = null;
+        this.imageLoaded = false;
+        this.imageError = false;
+    }
+},
+
+// Also fix the closeEvent method
+closeEventModal() {
+    this.selectedEvent = null;
+    this.imageLoaded = false;
+    this.imageError = false;
+    this.qrCodeGenerated = false;
+    this.showQRFallback = false;
+},
+
+// Enhanced getEventImageUrl with better error handling
+getEventImageUrl(imageName) {
+    try {
+        if (!imageName) {
+            console.warn('No image name provided');
+            return null;
+        }
+        
+        // If it's already a full URL, return as-is
+        if (imageName.startsWith('http') || imageName.startsWith('data:')) {
+            return imageName;
+        }
+        
+        // Construct the full URL
+        const baseUrl = this.apiUrl.replace('/api', '');
+        const fullUrl = `${baseUrl}/uploads/${imageName}`;
+        
+        console.log('Constructed image URL:', fullUrl);
+        return fullUrl;
+        
+    } catch (error) {
+        console.error('Error constructing image URL:', error);
+        return null;
+    }
+}
                 
                 async loadQRCodeFromBackend(event) {
                     try {
