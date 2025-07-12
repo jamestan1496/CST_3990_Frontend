@@ -1356,6 +1356,184 @@
     }
 }
 
+/* Event Image Container */
+.event-image-container {
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.image-wrapper {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Actual Event Image */
+.event-image {
+    width: 100%;
+    max-width: 400px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 10px;
+    transition: transform 0.3s ease;
+}
+
+.event-image:hover {
+    transform: scale(1.02);
+}
+
+/* Loading State */
+.image-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 400px;
+    height: 200px;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    color: #6c757d;
+    gap: 0.5rem;
+}
+
+.image-loading i {
+    font-size: 1.5rem;
+    color: #007bff;
+}
+
+/* Image Placeholder/Error State */
+.image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 400px;
+    height: 200px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    color: #6c757d;
+    gap: 0.5rem;
+}
+
+.image-placeholder i {
+    font-size: 2rem;
+    color: #adb5bd;
+}
+
+.image-placeholder span {
+    font-weight: 500;
+}
+
+.image-placeholder small {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    max-width: 300px;
+    word-break: break-all;
+    text-align: center;
+}
+
+/* Event Card Images */
+.event-card-image {
+    position: relative;
+    width: 100%;
+    height: 150px;
+    overflow: hidden;
+    border-radius: 10px 10px 0 0;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.event-card:hover .card-image {
+    transform: scale(1.05);
+}
+
+/* Image Overlay for Status */
+.image-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5rem;
+}
+
+.image-overlay .event-status {
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+/* Status Colors */
+.status-upcoming {
+    background: rgba(23, 162, 184, 0.9) !important;
+}
+
+.status-live {
+    background: rgba(40, 167, 69, 0.9) !important;
+}
+
+.status-completed {
+    background: rgba(108, 117, 125, 0.9) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .event-image,
+    .image-loading,
+    .image-placeholder {
+        max-width: 100%;
+        width: 300px;
+        height: 150px;
+    }
+    
+    .event-card-image {
+        height: 120px;
+    }
+}
+
+/* Animation for loading */
+@keyframes imageLoading {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.image-loading {
+    animation: imageLoading 1.5s ease-in-out infinite;
+}
+
+/* Image Error Recovery */
+.image-error-retry {
+    margin-top: 0.5rem;
+}
+
+.retry-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.retry-btn:hover {
+    background: #0056b3;
+}
+
 
 
 /* Responsive design for modal actions */
