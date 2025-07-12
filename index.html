@@ -1429,13 +1429,28 @@
                 async loadEvents() {
                     try {
                         const response = await axios.get(`${this.apiUrl}/events`, {
-                            params: this.eventFilters
-                        });
+                        params: this.eventFilters
+                    });
+        
+                    // Handle the new response format with pagination
+                    if (response.data.events) {
+                        this.allEvents = response.data.events;
+                    } else {
+                        // Fallback for old format (array directly)
                         this.allEvents = response.data;
-                    } catch (error) {
-                        this.showNotification('Failed to load events', 'error');
                     }
-                },
+        
+                    console.log('Events loaded:', this.allEvents.length);
+                    } catch (error) {
+                        console.error('Load events error:', error);
+                        this.showNotification('Failed to load events', 'error');
+        
+                        // If the route doesn't exist yet, show helpful message
+                        if (error.response?.status === 404) {
+                            this.showNotification('Events route not found - please add the missing backend route', 'error');
+                        }
+                    }
+                }
                 
                 async loadDashboardData() {
                     try {
