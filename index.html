@@ -884,53 +884,6 @@
                     </div>
                 </div>
             </div>
-            <div v-if="showDeleteConfirm" class="modal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3>Confirm Delete</h3>
-                            <button class="close-btn" @click="cancelDelete">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-        
-                        <div class="delete-confirmation">
-                            <div class="warning-icon">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
-            
-                            <h4>Are you sure you want to delete this event?</h4>
-            
-                        <div v-if="eventToDelete" class="event-details">
-                            <p><strong>Event:</strong> {{ eventToDelete.title }}</p>
-                            <p><strong>Date:</strong> {{ formatDate(eventToDelete.date) }}</p>
-                            <p><strong>Location:</strong> {{ eventToDelete.location }}</p>
-                        </div>
-            
-                        <div class="warning-text">
-                            <p><strong>⚠️ This action cannot be undone!</strong></p>
-                            <p>Deleting this event will:</p>
-                            <ul>
-                                <li>Remove the event permanently</li>
-                                <li>Delete all attendee registrations</li>
-                                <li>Remove all session tracking data</li>
-                                <li>Clear all clustering results</li>
-                            </ul>
-                        </div>
-            
-                        <div class="modal-actions">
-                            <button class="btn btn-secondary" @click="cancelDelete" :disabled="deleteLoading">
-                                <i class="fas fa-times"></i> Cancel
-                            </button>
-                
-                            <button class="btn btn-danger" @click="deleteEvent" :disabled="deleteLoading">
-                                <span v-if="deleteLoading" class="loading-spinner"></span>
-                                <i v-else class="fas fa-trash"></i>
-                                    {{ deleteLoading ? 'Deleting...' : 'Delete Event' }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </main>
 
         <!-- Notifications -->
@@ -1047,10 +1000,6 @@
                     // Notification
                     notification: null,
 
-                    // Delete Functionality
-                    showDeleteConfirm: false,
-                    eventToDelete: null,
-                    deleteLoading: false,
                     // API
                     apiUrl: 'https://cst-3990-backend-f533.onrender.com/api',
                     socket: null
@@ -1495,48 +1444,6 @@
                     // Handle successful image loading
                 handleImageLoad(event) {
                     console.log('Event image loaded successfully:', event.target.src);
-                },
-
-                // Delete event functionality
-                confirmDelete(event) {
-                    this.eventToDelete = event;
-                    this.showDeleteConfirm = true;
-                },
-    
-                cancelDelete() {
-                    this.eventToDelete = null;
-                    this.showDeleteConfirm = false;
-                },
-    
-                async deleteEvent() {
-                    if (!this.eventToDelete) return;
-        
-                    this.deleteLoading = true;
-                    try {
-                        const response = await axios.delete(`${this.apiUrl}/events/${this.eventToDelete._id}`, {
-                            headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
-                            }
-                        });
-            
-                        // Remove the event from the local array
-                        this.userEvents = this.userEvents.filter(event => event._id !== this.eventToDelete._id);
-            
-                        // Update stats
-                        this.updateStats();
-            
-                        // Close modal and reset
-                        this.showDeleteConfirm = false;
-                        this.eventToDelete = null;
-            
-                        this.showNotification('Event deleted successfully!', 'success');
-            
-                    } catch (error) {
-                        console.error('Delete event error:', error);
-                        this.showNotification(error.response?.data?.error || 'Failed to delete event', 'error');
-                    } finally {
-                        this.deleteLoading = false;
-                    }
                 },
                 
                 async registerForEvent(event) {
