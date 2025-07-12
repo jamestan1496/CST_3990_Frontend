@@ -490,14 +490,31 @@
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-                        <div v-if="selectedEvent.image" class="event-image-container" style="margin: 1rem 0;">
-                            <img 
-                                :src="getEventImageUrl(selectedEvent.image)" 
-                                :alt="selectedEvent.title"
-                                style="width: 100%; max-width: 400px; height: 200px; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
-                                @error="handleImageError"
-                                @load="handleImageLoad"
-                            >
+                        <div v-if="selectedEvent.image" class="event-image-container">
+                            <div class="image-wrapper">
+                                <!-- Loading placeholder -->
+                                <div class="image-loading" v-show="!imageLoaded && !imageError">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    <span>Loading image...</span>
+                                </div>
+                                
+                                <!-- Actual image -->
+                                <img 
+                                    :src="getEventImageUrl(selectedEvent.image)" 
+                                    :alt="selectedEvent.title"
+                                    class="event-image"
+                                    @error="handleImageError"
+                                    @load="handleImageLoad"
+                                    v-show="imageLoaded && !imageError"
+                                >
+                                
+                                <!-- Error placeholder -->
+                                <div v-if="imageError" class="image-placeholder">
+                                    <i class="fas fa-image"></i>
+                                    <span>Image not available</span>
+                                    <small>{{ selectedEvent.image }}</small>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="event-meta">
@@ -1751,28 +1768,118 @@
                 // Image URL construction
                 getEventImageUrl(imageName) {
                     if (!imageName) return null;
-    
+                    
+                    // If it's already a full URL (data URL or external URL), return as-is
+                    if (imageName.startsWith('http') || imageName.startsWith('data:')) {
+                        return imageName;
+                    }
+                    
                     // Construct the full URL to the uploaded image
                     const baseUrl = this.apiUrl.replace('/api', ''); // Remove /api from the URL
                     const imageUrl = `${baseUrl}/uploads/${imageName}`;
-    
+                    
                     console.log('Constructing image URL:', imageUrl);
                     return imageUrl;
-                    },
-
-                // Handle image loading errors
+                },
+                
+                // Enhanced image error handling
                 handleImageError(event) {
                     console.error('Failed to load event image:', event.target.src);
-                    this.showNotification('Failed to load event image', 'error');
-    
-                    // Hide the image container or show a placeholder
+                    
+                    // Hide the broken image
                     event.target.style.display = 'none';
-                    },
-
-                    // Handle successful image loading
+                    
+                    // Show a placeholder or text instead
+                    const container = event.target.parentElement;
+                    if (container && !container.querySelector('.image-placeholder')) {
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'image-placeholder';
+                        placeholder.innerHTML = `
+                            <i class="fas fa-image"></i>
+                            <span>Image not available</span>
+                        `;
+                        container.appendChild(placeholder);
+                    }
+                    
+                    this.showNotification('Event image could not be loaded', 'warning');
+                },
+                
+                // Handle successful image loading
                 handleImageLoad(event) {
                     console.log('Event image loaded successfully:', event.target.src);
+                    
+                    // Remove any existing placeholder
+                    const container = event.target.parentElement;
+                    const placeholder = container?.querySelector('.image-placeholder');
+                    if (placeholder) {
+                        placeholder.remove();
+                    }
                 },
+                
+                // Check if image exists before displaying
+                async checkImageExists(imageUrl) {
+                    try {
+                        const response = await fetch(imageUrl, { method: 'HEAD' });
+                        return response.ok;
+                    } catch (error) {
+                        console.error('Image check failed:', error);
+                        return false;
+                    }
+                },
+                
+                // Enhanced image upload handling with validation
+                handleImageUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                
+                    console.log('Image upload started:', file.name, 'Size:', Math.round(file.size / 1024) + 'KB');
+                
+                    // Validate file type
+                    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                    if (!allowedTypes.includes(file.type)) {
+                        this.showNotification('Please select a valid image file (JPEG, PNG, GIF, or WebP)', 'error');
+                        event.target.value = ''; // Clear the input
+                        return;
+                    }
+                
+                    // Validate file size (limit to 5MB)
+                    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+                    if (file.size > maxSize) {
+                        this.showNotification('Image file must be less than 5MB', 'error');
+                        event.target.value = ''; // Clear the input
+                        return;
+                    }
+                
+                    // Store the file for upload
+                    this.eventForm.image = file;
+                
+                    // Create preview URL
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.eventForm.imagePreview = e.target.result;
+                        console.log('Image preview created successfully');
+                    };
+                    reader.onerror = (error) => {
+                        console.error('Error creating image preview:', error);
+                        this.showNotification('Error creating image preview', 'error');
+                    };
+                    reader.readAsDataURL(file);
+                
+                    this.showNotification('Image selected successfully!', 'success');
+                },
+                
+                // Remove image with cleanup
+                removeImage() {
+                    this.eventForm.image = null;
+                    this.eventForm.imagePreview = null;
+                
+                    // Clear the file input
+                    if (this.$refs.imageInput) {
+                        this.$refs.imageInput.value = '';
+                    }
+                
+                    this.showNotification('Image removed', 'info');
+                }
                 
                 async registerForEvent(event) {
                     try {
