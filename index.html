@@ -196,6 +196,14 @@
                                             <i class="fas fa-eye"></i> View
                                         </button>
                                         
+                                        <button v-if="currentUser.role === 'organizer'" class="btn btn-info btn-small" @click="editEvent(event)" title="Edit Event">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        
+                                        <button v-if="currentUser.role === 'organizer'" class="btn btn-danger btn-small" @click="confirmDelete(event)" title="Delete Event">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                        
                                         <button v-if="currentUser.role === 'organizer'" class="btn btn-secondary btn-small" @click="viewGuests(event)">
                                             <i class="fas fa-users"></i> Guests
                                         </button>
@@ -996,6 +1004,10 @@
                         search: '',
                         status: ''
                     },
+
+                    showDeleteConfirm: false,
+                    eventToDelete: null,
+                    deleteLoading: false,
                     
                     // Notification
                     notification: null,
@@ -1374,6 +1386,49 @@
     
                     this.showNotification('Image removed', 'info');
                 },
+
+                confirmDelete(event) {
+                    this.eventToDelete = event;
+                    this.showDeleteConfirm = true;
+                },
+
+                // Cancel delete
+                cancelDelete() {
+                    this.eventToDelete = null;
+                    this.showDeleteConfirm = false;
+                },
+
+                // Delete event
+                async deleteEvent() {
+                    if (!this.eventToDelete) return;
+    
+                    this.deleteLoading = true;
+                    try {
+                        const response = await axios.delete(`${this.apiUrl}/events/${this.eventToDelete._id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
+                        }
+                    });
+        
+                    // Remove the event from the local array
+                    this.userEvents = this.userEvents.filter(event => event._id !== this.eventToDelete._id);
+        
+                    // Update stats
+                    this.updateStats();
+        
+                    // Close modal and reset
+                    this.showDeleteConfirm = false;
+                    this.eventToDelete = null;
+        
+                    this.showNotification('Event deleted successfully!', 'success');
+        
+                    } catch (error) {
+                        console.error('Delete event error:', error);
+                        this.showNotification(error.response?.data?.error || 'Failed to delete event', 'error');
+                    } finally {
+                        this.deleteLoading = false;
+                    }
+                }
                 
                 async loadEvents() {
                     try {
