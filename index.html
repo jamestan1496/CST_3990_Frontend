@@ -1414,6 +1414,43 @@
                     this.showNotification('Image removed', 'info');
                 },
 
+                // Show changes summary (for edit mode)
+                getChangesSummary() {
+                    if (!this.originalEventData || !this.isEditMode) return [];
+                    
+                    const changes = [];
+                    const current = this.eventForm;
+                    const original = this.originalEventData;
+                    
+                    if (current.title !== original.title) {
+                        changes.push(`Title: "${original.title}" → "${current.title}"`);
+                    }
+                    if (current.description !== original.description) {
+                        changes.push(`Description updated`);
+                    }
+                    if (current.date !== original.date.split('T')[0]) {
+                        changes.push(`Date: ${this.formatDate(original.date)} → ${this.formatDate(current.date)}`);
+                    }
+                    if (current.time !== original.time) {
+                        changes.push(`Time: ${original.time} → ${current.time}`);
+                    }
+                    if (current.location !== original.location) {
+                        changes.push(`Location: "${original.location}" → "${current.location}"`);
+                    }
+                    if (current.maxAttendees !== original.maxAttendees) {
+                        changes.push(`Max Attendees: ${original.maxAttendees} → ${current.maxAttendees}`);
+                    }
+                    if (current.image instanceof File) {
+                        changes.push(`Image: Updated`);
+                    }
+                    if (JSON.stringify(current.sessions) !== JSON.stringify(original.sessions)) {
+                        changes.push(`Sessions: Updated (${current.sessions.length} sessions)`);
+                    }
+                    
+                    return changes;
+                },
+
+
                 editEvent(event) {
                     this.isEditMode = true;
                     this.editingEventId = event._id;
