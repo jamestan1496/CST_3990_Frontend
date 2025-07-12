@@ -1189,118 +1189,174 @@
             color: white;
         }
 
-/* Delete confirmation modal styles */
+/* Delete Confirmation Modal Styles */
 .delete-confirmation {
     text-align: center;
     padding: 1rem;
 }
 
-.delete-confirmation .warning-icon {
-    font-size: 3rem;
+.warning-icon {
+    font-size: 4rem;
     color: #ff6b6b;
     margin-bottom: 1rem;
+}
+
+.warning-icon i {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
 
 .delete-confirmation h4 {
     color: #333;
     margin-bottom: 1.5rem;
-    font-size: 1.2rem;
+    font-size: 1.3rem;
 }
 
-.delete-confirmation .event-details {
+.event-details {
     background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 1rem;
     margin: 1rem 0;
-    text-align: left;
+    border-left: 4px solid #ff6b6b;
 }
 
-.delete-confirmation .event-details p {
+.event-details p {
     margin: 0.5rem 0;
     color: #555;
 }
 
-.delete-confirmation .warning-text {
+.warning-text {
     background: #fff3cd;
     border: 1px solid #ffeaa7;
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 1rem;
     margin: 1rem 0;
-    text-align: left;
-}
-
-.delete-confirmation .warning-text p {
-    margin: 0.5rem 0;
     color: #856404;
 }
 
-.delete-confirmation .warning-text ul {
+.warning-text p {
+    margin: 0.5rem 0;
+}
+
+.warning-text ul {
+    text-align: left;
     margin: 0.5rem 0;
     padding-left: 1.5rem;
 }
 
-.delete-confirmation .warning-text li {
-    margin: 0.25rem 0;
-    color: #856404;
+.warning-text li {
+    margin: 0.3rem 0;
 }
 
 .modal-actions {
     display: flex;
     gap: 1rem;
     justify-content: center;
-    margin-top: 1.5rem;
+    margin-top: 2rem;
 }
 
 .modal-actions .btn {
     min-width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
-/* Danger button styles */
+/* Enhanced button styles */
 .btn-danger {
-    background: linear-gradient(135deg, #ff6b6b, #e74c3c);
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
     color: white;
     border: none;
     transition: all 0.3s ease;
 }
 
-.btn-danger:hover {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
+.btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ff5252, #e53935);
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
-}
-
-.btn-danger:active {
-    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
 }
 
 .btn-danger:disabled {
-    background: #bbb;
+    opacity: 0.6;
     cursor: not-allowed;
     transform: none;
-    box-shadow: none;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #74b9ff, #0984e3);
+    color: white;
+    border: none;
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #0984e3, #0066cc);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(116, 185, 255, 0.4);
 }
 
 /* Loading spinner for delete button */
-.btn-danger .loading-spinner {
-    display: inline-block;
+.loading-spinner {
     width: 16px;
     height: 16px;
-    border: 2px solid #ffffff;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
     border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 1s ease-in-out infinite;
-    margin-right: 0.5rem;
+    animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-/* Make delete button stand out in event actions */
-.event-actions .btn-danger {
-    margin-left: auto; /* Push delete button to the right */
+/* Enhanced event actions layout */
+.event-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
 }
+
+.event-actions .btn-small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.event-actions .btn-small:hover {
+    transform: translateY(-1px);
+}
+
+/* Responsive design for event actions */
+@media (max-width: 768px) {
+    .event-actions {
+        flex-direction: column;
+    }
+    
+    .event-actions .btn-small {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .modal-actions .btn {
+        width: 100%;
+        max-width: 200px;
+    }
+}
+
+
 
 /* Responsive design for modal actions */
 @media (max-width: 768px) {
