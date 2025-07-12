@@ -196,7 +196,7 @@
                                             <i class="fas fa-eye"></i> View
                                         </button>
                                         
-                                        <button v-if="currentUser.role === 'organizer'" class="btn btn-info btn-small" @click="editEvent(event)" title="Edit Event">
+                                        <button class="btn btn-info btn-small" @click="editEvent(event)" title="Edit Event">
                                             <i class="fas fa-edit"></i> Edit
                                         </button>
                                         
@@ -537,16 +537,24 @@
                 </div>
 
                 <!-- Create Event Modal -->
-                <div v-if="showCreateEvent" class="modal">
+                <div v-if="showCreateEvent || showEditEvent" class="modal">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h3>Create New Event</h3>
-                            <button class="close-btn" @click="showCreateEvent = false">
+                            <h3>{{ isEditMode ? 'Edit Event' : 'Create New Event' }}</h3>
+                            <button class="close-btn" @click="isEditMode ? cancelEdit() : (showCreateEvent = false)">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                         
-                        <form @submit.prevent="createEvent" class="auth-form">
+                        <!-- Show changes summary for edit mode -->
+                        <div v-if="isEditMode && getChangesSummary().length > 0" class="changes-summary">
+                            <h4><i class="fas fa-edit"></i> Changes Made:</h4>
+                            <ul>
+                                <li v-for="change in getChangesSummary()" :key="change">{{ change }}</li>
+                            </ul>
+                        </div>
+                        
+                        <form @submit.prevent="createOrUpdateEvent" class="auth-form">
                             <div class="form-group">
                                 <label>Event Title</label>
                                 <input type="text" v-model="eventForm.title" required>
@@ -573,21 +581,28 @@
                             </div>
                             
                             <div class="form-group">
-                                <label>Event Image (Optional)</label>
+                                <label>Event Image {{ isEditMode ? '(Leave empty to keep current image)' : '(Optional)' }}</label>
                                 <input type="file" ref="imageInput" @change="handleImageUpload" accept="image/*">
                                 <div v-if="eventForm.imagePreview" class="image-preview">
                                     <img :src="eventForm.imagePreview" alt="Event preview" style="max-width: 200px; border-radius: 10px;">
                                     <button type="button" @click="removeImage" class="btn btn-danger btn-small">
                                         <i class="fas fa-times"></i> Remove
                                     </button>
+                                    <p v-if="isEditMode && !eventForm.image" style="font-size: 0.9rem; opacity: 0.7;">
+                                        <i class="fas fa-info-circle"></i> Current image (upload a new one to replace)
+                                    </p>
                                 </div>
                             </div>
                             
                             <div class="form-group">
                                 <label>Max Attendees</label>
                                 <input type="number" v-model="eventForm.maxAttendees" min="1" value="100">
+                                <small v-if="isEditMode && originalEventData" style="opacity: 0.7;">
+                                    Current registrations: {{ originalEventData.attendeeCount || 0 }}
+                                </small>
                             </div>
                             
+                            <!-- Sessions section remains the same -->
                             <div class="form-group">
                                 <label>Sessions & Agenda</label>
                                 <div class="sessions-builder">
@@ -656,10 +671,17 @@
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary" :disabled="authLoading">
-                                <span v-if="authLoading" class="loading-spinner"></span>
-                                Create Event
-                            </button>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" @click="isEditMode ? cancelEdit() : (showCreateEvent = false)">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                                
+                                <button type="submit" class="btn btn-primary" :disabled="authLoading">
+                                    <span v-if="authLoading" class="loading-spinner"></span>
+                                    <i v-else :class="isEditMode ? 'fas fa-save' : 'fas fa-plus'"></i>
+                                    {{ authLoading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Event' : 'Create Event') }}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
