@@ -1005,10 +1005,15 @@
                         status: ''
                     },
 
+                    //Delete
                     showDeleteConfirm: false,
                     eventToDelete: null,
                     deleteLoading: false,
-                    
+                    //Edit
+                    showEditEvent: false,
+                    editingEventId: null,
+                    isEditMode: false,
+                    originalEventData: null,
                     // Notification
                     notification: null,
 
@@ -1386,6 +1391,166 @@
     
                     this.showNotification('Image removed', 'info');
                 },
+
+                editEvent(event) {
+                    this.isEditMode = true;
+                    this.editingEventId = event._id;
+                    this.originalEventData = { ...event }; // Store original data
+    
+                    // Pre-populate the form with existing event data
+                    this.eventForm = {
+                        title: event.title,
+                        description: event.description,
+                        date: event.date.split('T')[0], // Format date for input
+                        time: event.time,
+                        location: event.location,
+                        maxAttendees: event.maxAttendees,
+                        sessions: event.sessions ? [...event.sessions] : [],
+                        image: null, // New image file (if user wants to change)
+                        imagePreview: event.image ? this.getEventImageUrl(event.image) : null // Show existing image
+                    };
+    
+                    this.showEditEvent = true;
+                    this.showNotification('Editing event - make your changes and save', 'info');
+                },
+
+                // Cancel editing
+                cancelEdit() {
+                    this.showEditEvent = false;
+                    this.isEditMode = false;
+                    this.editingEventId = null;
+                    this.originalEventData = null;
+                    this.resetEventForm();
+                    this.showNotification('Edit cancelled', 'info');
+                },
+
+                // Update existing event
+                async updateEvent() {
+                    this.authLoading = true;
+                    try {
+                        // Validate sessions don't have conflicts
+                        const hasConflicts = this.eventForm.sessions.some(session => session.conflict);
+                        if (hasConflicts) {
+                            this.showNotification('Please resolve session conflicts before updating the event', 'error');
+                            this.authLoading = false;
+                            return;
+                        }
+                
+                        // Validate date/time
+                        if (!this.validateEventDateTime()) {
+                            this.authLoading = false;
+                            return;
+                        }
+                
+                        // Get the auth token
+                        const token = localStorage.getItem('eventhive_token');
+                        if (!token) {
+                            throw new Error('No authentication token found. Please log in again.');
+                        }
+                
+                        // Create FormData object
+                        const formData = new FormData();
+                        
+                        // Add all fields
+                        formData.append('title', this.eventForm.title || '');
+                        formData.append('description', this.eventForm.description || '');
+                        formData.append('date', this.eventForm.date || '');
+                        formData.append('time', this.eventForm.time || '');
+                        formData.append('location', this.eventForm.location || '');
+                        
+                        if (this.eventForm.maxAttendees) {
+                            formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
+                        }
+                        
+                        // Add sessions
+                        if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
+                            formData.append('sessions', JSON.stringify(this.eventForm.sessions));
+                        }
+                        
+                        // Add new image if user selected one
+                        if (this.eventForm.image instanceof File) {
+                            formData.append('image', this.eventForm.image);
+                        }
+                
+                        console.log('Updating event:', this.editingEventId);
+                
+                        // Send PUT request to update event
+                        const response = await axios.put(`${this.apiUrl}/events/${this.editingEventId}`, formData, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                // Don't set Content-Type - let browser set it with boundary for FormData
+                            }
+                        });
+                
+                        console.log('Event updated successfully:', response.data);
+                
+                        // Update the event in the local array
+                        const eventIndex = this.userEvents.findIndex(e => e._id === this.editingEventId);
+                        if (eventIndex !== -1) {
+                            this.userEvents[eventIndex] = response.data.event;
+                        }
+                
+                        // Close modal and reset
+                        this.showEditEvent = false;
+                        this.isEditMode = false;
+                        this.editingEventId = null;
+                        this.originalEventData = null;
+                        this.resetEventForm();
+                
+                        this.showNotification('Event updated successfully!', 'success');
+                
+                    } catch (error) {
+                        console.error('Event update error:', error);
+                        
+                        if (error.response) {
+                            console.error('Server error response:', error.response.data);
+                            this.showNotification(error.response.data?.error || 'Failed to update event', 'error');
+                        } else if (error.request) {
+                            console.error('No response received:', error.request);
+                            this.showNotification('No response from server. Please check if the server is running.', 'error');
+                        } else {
+                            console.error('Request setup error:', error.message);
+                            this.showNotification(error.message || 'Failed to update event', 'error');
+                        }
+                    } finally {
+                        this.authLoading = false;
+                    }
+                },
+                
+                // Enhanced createEvent method that handles both create and update
+                async createOrUpdateEvent() {
+                    if (this.isEditMode) {
+                        await this.updateEvent();
+                    } else {
+                        await this.createEvent();
+                    }
+                },
+                
+                // Enhanced resetEventForm with edit mode handling
+                resetEventForm() {
+                    this.eventForm = {
+                        title: '',
+                        description: '',
+                        date: '',
+                        time: '',
+                        location: '',
+                        maxAttendees: 100,
+                        sessions: [],
+                        image: null,
+                        imagePreview: null
+                    };
+                    
+                    // Clear the file input if it exists
+                    if (this.$refs.imageInput) {
+                        this.$refs.imageInput.value = '';
+                    }
+                    
+                    // Reset edit mode flags
+                    this.isEditMode = false;
+                    this.editingEventId = null;
+                    this.originalEventData = null;
+                },
+
 
                 confirmDelete(event) {
                     this.eventToDelete = event;
