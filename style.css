@@ -2,29 +2,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
 
 :root {
-    /* Sophisticated Color Palette */
-    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --warning-gradient: linear-gradient(135deg, #f8ca5e 0%, #fda4ba 100%);
-    --danger-gradient: linear-gradient(135deg, #ffa8a8 0%, #fecaca 100%);
+    /* Sophisticated Dirty White/Cream Color Palette */
+    --primary-gradient: linear-gradient(135deg, #8b7355 0%, #a0956b 100%);
+    --secondary-gradient: linear-gradient(135deg, #b8a082 0%, #d4c4a8 100%);
+    --success-gradient: linear-gradient(135deg, #7d8471 0%, #9ba082 100%);
+    --warning-gradient: linear-gradient(135deg, #d4b896 0%, #e8d5b7 100%);
+    --danger-gradient: linear-gradient(135deg, #c4a484 0%, #d4b896 100%);
     
     /* Background Gradients */
-    --bg-primary: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-    --bg-card: rgba(255, 255, 255, 0.08);
-    --bg-card-hover: rgba(255, 255, 255, 0.12);
-    --bg-modal: rgba(255, 255, 255, 0.95);
+    --bg-primary: linear-gradient(135deg, #f5f2eb 0%, #ede8dd 100%);
+    --bg-card: rgba(139, 115, 85, 0.08);
+    --bg-card-hover: rgba(139, 115, 85, 0.12);
+    --bg-modal: rgba(249, 246, 240, 0.98);
     
     /* Glass Effect */
-    --glass-bg: rgba(255, 255, 255, 0.1);
-    --glass-border: rgba(255, 255, 255, 0.2);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    --glass-bg: rgba(139, 115, 85, 0.1);
+    --glass-border: rgba(139, 115, 85, 0.2);
+    --glass-shadow: 0 8px 32px 0 rgba(139, 115, 85, 0.15);
     
     /* Text Colors */
-    --text-primary: #ffffff;
-    --text-secondary: rgba(255, 255, 255, 0.8);
-    --text-muted: rgba(255, 255, 255, 0.6);
-    --text-dark: #1a202c;
+    --text-primary: #3c2f23;
+    --text-secondary: rgba(60, 47, 35, 0.8);
+    --text-muted: rgba(60, 47, 35, 0.6);
+    --text-dark: #2a1f17;
     
     /* Shadows */
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -96,9 +96,9 @@ body {
     right: 0;
     bottom: 0;
     background: linear-gradient(90deg, 
-        rgba(255, 255, 255, 0.1) 0%, 
-        rgba(255, 255, 255, 0.05) 50%, 
-        rgba(255, 255, 255, 0.1) 100%);
+        rgba(139, 115, 85, 0.1) 0%, 
+        rgba(139, 115, 85, 0.05) 50%, 
+        rgba(139, 115, 85, 0.1) 100%);
     opacity: 0;
     transition: opacity var(--transition-normal);
 }
@@ -130,7 +130,7 @@ body {
 
 .logo:hover {
     transform: translateY(-2px);
-    text-shadow: 0 4px 20px rgba(255, 255, 255, 0.3);
+    text-shadow: 0 4px 20px rgba(139, 115, 85, 0.3);
 }
 
 .logo i {
@@ -216,7 +216,7 @@ body {
     font-size: clamp(2.5rem, 6vw, 4rem);
     font-weight: 700;
     margin-bottom: var(--space-lg);
-    background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+    background: linear-gradient(135deg, #3c2f23 0%, #5a4a3a 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -506,7 +506,7 @@ body {
     font-size: 2.5rem;
     font-weight: 600;
     margin-bottom: var(--space-sm);
-    background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+    background: linear-gradient(135deg, #3c2f23 0%, #5a4a3a 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -695,22 +695,23 @@ body {
     letter-spacing: 0.05em;
 }
 
+/* Status Colors for Dirty White Theme */
 .status-upcoming {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #7d8471 0%, #9ba082 100%);
     color: white;
-    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+    box-shadow: 0 4px 15px rgba(125, 132, 113, 0.3);
 }
 
 .status-live {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #d4b896 0%, #c4a484 100%);
     color: white;
-    box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+    box-shadow: 0 4px 15px rgba(212, 184, 150, 0.3);
 }
 
 .status-completed {
-    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+    background: linear-gradient(135deg, #9c8b7a 0%, #8b7a68 100%);
     color: white;
-    box-shadow: 0 4px 15px rgba(156, 163, 175, 0.3);
+    box-shadow: 0 4px 15px rgba(156, 139, 122, 0.3);
 }
 
 .event-actions {
@@ -1068,7 +1069,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Enhanced Delete Confirmation */
+/* Enhanced Delete Confirmation for Dirty White Theme */
 .delete-confirmation {
     text-align: center;
     padding: var(--space-lg);
@@ -1076,7 +1077,7 @@ body {
 
 .warning-icon {
     font-size: 4rem;
-    color: #ef4444;
+    color: #c4a484;
     margin-bottom: var(--space-lg);
     animation: pulse 2s infinite;
 }
@@ -1095,26 +1096,26 @@ body {
 }
 
 .event-details {
-    background: linear-gradient(135deg, #fef7f7 0%, #fdf2f2 100%);
+    background: linear-gradient(135deg, #f9f6f0 0%, #f0ebe1 100%);
     border-radius: var(--radius-md);
     padding: var(--space-lg);
     margin: var(--space-lg) 0;
-    border-left: 4px solid #ef4444;
+    border-left: 4px solid #c4a484;
     box-shadow: var(--shadow-sm);
 }
 
 .event-details p {
     margin: var(--space-sm) 0;
-    color: #374151;
+    color: #5a4a3a;
 }
 
 .warning-text {
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    border: 1px solid #f59e0b;
+    background: linear-gradient(135deg, #faf8f3 0%, #f2eee5 100%);
+    border: 1px solid #d4b896;
     border-radius: var(--radius-md);
     padding: var(--space-lg);
     margin: var(--space-lg) 0;
-    color: #92400e;
+    color: #8b7355;
     box-shadow: var(--shadow-sm);
 }
 
@@ -1597,13 +1598,13 @@ body {
     background: rgba(255, 255, 255, 0.15);
 }
 
-/* Enhanced QR Scanner */
+/* Enhanced QR Scanner for Dirty White Theme */
 .qr-scanner {
     margin-bottom: var(--space-xl);
     padding: var(--space-lg);
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    background: linear-gradient(135deg, #f9f6f0 0%, #f0ebe1 100%);
     border-radius: var(--radius-lg);
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(139, 115, 85, 0.2);
 }
 
 .qr-scanner h4 {
@@ -1665,7 +1666,7 @@ body {
     position: absolute;
     width: 20px;
     height: 20px;
-    border: 3px solid #10b981;
+    border: 3px solid #8b7355;
 }
 
 .scan-corners::before {
@@ -1691,23 +1692,23 @@ body {
 }
 
 .scan-status.scanning {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    color: #1d4ed8;
+    background: linear-gradient(135deg, #f0ebe1 0%, #e8ddd0 100%);
+    color: #8b7355;
 }
 
 .scan-status.success {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-    color: #16a34a;
+    background: linear-gradient(135deg, #f0f4ed 0%, #e8f0e2 100%);
+    color: #7d8471;
 }
 
 .scan-status.error {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    color: #dc2626;
+    background: linear-gradient(135deg, #f9f1ed 0%, #f0e6e0 100%);
+    color: #c4a484;
 }
 
 .camera-error {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    color: #dc2626;
+    background: linear-gradient(135deg, #f9f1ed 0%, #f0e6e0 100%);
+    color: #c4a484;
     padding: var(--space-md);
     border-radius: var(--radius-sm);
     margin-top: var(--space-md);
@@ -1726,9 +1727,9 @@ body {
 .qr-scanner-input {
     width: 100%;
     padding: var(--space-md);
-    border: 2px solid #e2e8f0;
+    border: 2px solid rgba(139, 115, 85, 0.2);
     border-radius: var(--radius-md);
-    background: white;
+    background: rgba(249, 246, 240, 0.8);
     color: var(--text-dark);
     font-family: monospace;
     font-size: 0.9rem;
@@ -1737,8 +1738,8 @@ body {
 
 .qr-scanner-input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #8b7355;
+    box-shadow: 0 0 0 3px rgba(139, 115, 85, 0.1);
 }
 
 /* Responsive Design */
