@@ -467,15 +467,17 @@ body {
 }
 
 .btn-danger {
-    background: var(--danger-gradient);
-    color: white;
-    box-shadow: var(--shadow-md);
+    background: var(--glass-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-info {
-    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-    color: white;
-    box-shadow: var(--shadow-md);
+    background: var(--glass-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-small {
