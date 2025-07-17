@@ -1028,21 +1028,28 @@
             },
             
             computed: {
-                filteredEvents() {
-                    let filtered = this.allEvents;
-                    
-                    if (this.eventFilters.search) {
-                        filtered = filtered.filter(event => 
-                            event.title.toLowerCase().includes(this.eventFilters.search.toLowerCase()) ||
-                            event.description.toLowerCase().includes(this.eventFilters.search.toLowerCase())
-                        );
-                    }
-                    
-                    if (this.eventFilters.status) {
-                        filtered = filtered.filter(event => event.status === this.eventFilters.status);
-                    }
-                    
-                    return filtered;
+               filteredEvents() {
+        if (!this.allEvents || this.allEvents.length === 0) {
+            return [];
+        }
+        
+        let filtered = [...this.allEvents];
+        
+        if (this.eventFilters.search && this.eventFilters.search.trim()) {
+            const searchTerm = this.eventFilters.search.toLowerCase().trim();
+            filtered = filtered.filter(event => 
+                (event.title && event.title.toLowerCase().includes(searchTerm)) ||
+                (event.description && event.description.toLowerCase().includes(searchTerm)) ||
+                (event.location && event.location.toLowerCase().includes(searchTerm))
+            );
+        }
+        
+        if (this.eventFilters.status && this.eventFilters.status.trim()) {
+            filtered = filtered.filter(event => event.status === this.eventFilters.status);
+        }
+        
+        console.log('Filtered events:', filtered.length, 'out of', this.allEvents.length);
+        return filtered;
                 },
                 
                 sortedSessions() {
@@ -1363,16 +1370,24 @@ async deleteEvent(event) {
                 },
                 
                 loadUserFromStorage() {
-                    const token = localStorage.getItem('eventhive_token');
-                    const user = localStorage.getItem('eventhive_user');
-                    
-                    if (token && user) {
-                        this.currentUser = JSON.parse(user);
-                        this.currentView = 'dashboard';
-                        this.loadDashboardData();
-                        this.loadProfile();
-                    }
-                },
+    const token = localStorage.getItem('eventhive_token');
+    const user = localStorage.getItem('eventhive_user');
+    
+    if (token && user) {
+        try {
+            this.currentUser = JSON.parse(user);
+            // Initialize profile data with current user data
+            this.profileData = { ...this.currentUser };
+            this.currentView = 'dashboard';
+            this.loadDashboardData();
+            this.loadProfile(); // Load full profile data
+        } catch (error) {
+            console.error('Failed to parse stored user data:', error);
+            localStorage.removeItem('eventhive_token');
+            localStorage.removeItem('eventhive_user');
+        }
+    }
+},
 
                 validateEventDateTime(date, time) {
     const now = new Date();
@@ -1782,32 +1797,48 @@ removeImage() {
 },
                 
                 async loadEvents() {
-                    try {
-                        const response = await axios.get(`${this.apiUrl}/events`, {
-                            params: this.eventFilters
-                        });
-                        this.allEvents = response.data;
-                    } catch (error) {
-                        this.showNotification('Failed to load events', 'error');
-                    }
-                },
-                
-                async loadDashboardData() {
-                    try {
-                        const response = await axios.get(`${this.apiUrl}/my-events`, {
-                            headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
-                            }
-                        });
-                        
-                        this.userEvents = response.data;
-                        this.updateStats();
-                        
-                        if (this.currentUser.role === 'attendee') {
-                            await this.loadEvents();
-                        }
-                    } catch (error) {
-                        this.showNotification('Failed to load dashboard data', 'error');
+    try {
+        console.log('Loading events from:', `${this.apiUrl}/events`);
+        console.log('Event filters:', this.eventFilters);
+        
+        // Make sure API URL is correct
+        const apiUrl = this.apiUrl || 'https://cst-3990-backend-f533.onrender.com/api';
+        
+        const response = await axios.get(`${apiUrl}/events`, {
+            params: {
+                search: this.eventFilters.search || '',
+                status: this.eventFilters.status || ''
+            },
+            timeout: 15000
+        });
+        
+        console.log('Events loaded successfully:', response.data.length, 'events');
+        this.allEvents = response.data || [];
+        
+        if (this.allEvents.length === 0) {
+            this.showNotification('No events found. Create some events first!', 'info');
+        }
+        
+    } catch (error) {
+        console.error('Load events error:', error);
+        
+        let errorMessage = 'Failed to load events';
+        
+        if (error.response) {
+            console.error('Events error response:', error.response);
+            if (error.response.status === 404) {
+                errorMessage = 'Events API not found. Please check if backend routes are properly configured.';
+            } else {
+                errorMessage = error.response.data?.error || `Server error: ${error.response.status}`;
+            }
+        } else if (error.request) {
+            errorMessage = 'Could not connect to server. Please check your internet connection.';
+        }
+        
+        this.showNotification(errorMessage, 'error');
+        
+        // Set empty array so UI doesn't break
+        this.allEvents = [];
                     }
                 },
                 // Image URL construction
@@ -2162,21 +2193,45 @@ handleImageLoad(event) {
                 
                 // Profile Methods
                 async loadProfile() {
-                    try {
-                        const response = await axios.get(`${this.apiUrl}/profile`, {
-                            headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
-                            }
-                        });
-                        
-                        this.profileData = response.data;
-                        this.updateProfileStats();
-                        this.loadRecentActivity();
-                    } catch (error) {
-                        this.showNotification('Failed to load profile', 'error');
-                    }
-                },
-                
+    try {
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            console.log('No token found for profile');
+            return;
+        }
+        
+        console.log('Loading profile data...');
+        
+        const response = await axios.get(`${this.apiUrl}/profile`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            timeout: 15000
+        });
+        
+        console.log('Profile loaded:', response.data);
+        this.profileData = response.data;
+        this.updateProfileStats();
+        this.loadRecentActivity();
+        
+    } catch (error) {
+        console.error('Load profile error:', error);
+        
+        if (error.response?.status === 401) {
+            this.showNotification('Session expired. Please log in again.', 'error');
+            this.logout();
+        } else if (error.response?.status === 404) {
+            this.showNotification('Profile API not found. Using current user data.', 'warning');
+            // Fallback to current user data
+            this.profileData = { ...this.currentUser };
+        } else {
+            this.showNotification('Failed to load profile. Using current user data.', 'warning');
+            // Fallback to current user data
+            this.profileData = { ...this.currentUser };
+        }
+    }
+},
+
                 async updateProfile(section) {
                     this.profileLoading = true;
                     try {
@@ -2240,12 +2295,16 @@ handleImageLoad(event) {
                 },
                 
                 updateProfileStats() {
-                    this.profileStats = {
-                        totalEvents: this.userEvents.length,
-                        totalConnections: Math.floor(Math.random() * 50) + 10, // Mock data
-                        memberSince: this.formatDate(this.profileData.createdAt || new Date())
-                    };
-                },
+    if (!this.profileData) return;
+    
+    this.profileStats = {
+        totalEvents: this.userEvents?.length || 0,
+        totalConnections: Math.floor(Math.random() * 50) + 10, // Mock data
+        memberSince: this.profileData.createdAt ? 
+            this.formatDate(this.profileData.createdAt) : 
+            this.formatDate(new Date())
+    };
+},
                 
                 loadRecentActivity() {
                     // Mock recent activity data
@@ -2272,18 +2331,23 @@ handleImageLoad(event) {
                 },
                 
                 // Navigation
-                navigateTo(view) {
-                    this.currentView = view;
-                    
-                    // Load data based on view
-                    if (view === 'profile') {
-                        this.loadProfile();
-                    } else if (view === 'dashboard') {
-                        this.loadDashboardData();
-                    } else if (view === 'events') {
-                        this.loadEvents();
-                    }
-                },
+               navigateTo(view) {
+    console.log('Navigating to:', view);
+    this.currentView = view;
+    
+    // Load data based on view
+    if (view === 'profile') {
+        if (!this.profileData || Object.keys(this.profileData).length === 0) {
+            // Initialize with current user data if empty
+            this.profileData = { ...this.currentUser };
+        }
+        this.loadProfile();
+    } else if (view === 'dashboard') {
+        this.loadDashboardData();
+    } else if (view === 'events') {
+        this.loadEvents();
+    }
+},
                 
                 // UI Methods
                 async viewEvent(event) {
@@ -2608,6 +2672,53 @@ handleImageLoad(event) {
                         this.showNotification('Failed to load analytics', 'error');
                     }
                 },
+                async loadDashboardData() {
+    try {
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            console.log('No token found for dashboard data');
+            return;
+        }
+        
+        console.log('Loading dashboard data...');
+        const apiUrl = this.apiUrl || 'https://cst-3990-backend-f533.onrender.com/api';
+        
+        // Load user's events (created or registered)
+        try {
+            const response = await axios.get(`${apiUrl}/my-events`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                timeout: 15000
+            });
+            
+            console.log('User events loaded:', response.data.length, 'events');
+            this.userEvents = response.data || [];
+            this.updateStats();
+        } catch (myEventsError) {
+            console.error('My events error:', myEventsError);
+            this.userEvents = [];
+            
+            if (myEventsError.response?.status === 404) {
+                this.showNotification('My events API not configured. Some features may not work.', 'warning');
+            }
+        }
+        
+        // For attendees, also load all available events
+        if (this.currentUser && this.currentUser.role === 'attendee') {
+            console.log('Loading all events for attendee...');
+            await this.loadEvents();
+        }
+        
+    } catch (error) {
+        console.error('Load dashboard data error:', error);
+        this.showNotification('Failed to load some dashboard data', 'warning');
+        
+        // Initialize empty arrays to prevent UI errors
+        this.userEvents = [];
+        this.allEvents = [];
+    }
+},
                 
                 generateMockAnalytics(event) {
                     const sessions = event.sessions || [];
