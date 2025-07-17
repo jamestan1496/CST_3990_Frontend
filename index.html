@@ -188,7 +188,9 @@
                                     <i class="fas fa-search"></i> Discover Events
                                 </button>
                             </div>
-                            
+                            <button v-if="isEditMode" type="button" class="btn btn-secondary" @click="cancelEdit">
+    Cancel Edit
+</button>
                             <div class="events-grid" v-if="userEvents.length > 0">
                                 <div v-for="event in userEvents" :key="event._id" class="event-card">
                                     <div class="event-card-header">
@@ -206,6 +208,17 @@
                                     <div class="event-actions">
                                         <button class="btn btn-secondary btn-small" @click="viewEvent(event)">
                                             <i class="fas fa-eye"></i> View
+                                        </button>
+                                        <button v-if="currentUser.role === 'organizer'" 
+                                            class="btn btn-primary btn-small" 
+                                             @click="editEvent(event)">
+                                                <i class="fas fa-edit"></i> Edit
+                                        </button>
+    
+                                        <button v-if="currentUser.role === 'organizer'" 
+                                        class="btn btn-danger btn-small" 
+                                        @click="deleteEvent(event)">
+                                        <i class="fas fa-trash"></i> Delete
                                         </button>
                                         
                                         <button v-if="currentUser.role === 'organizer'" class="btn btn-secondary btn-small" @click="viewGuests(event)">
@@ -544,11 +557,16 @@
                 <div v-if="showCreateEvent" class="modal">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h3>Create New Event</h3>
-                            <button class="close-btn" @click="showCreateEvent = false">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
+    <h3>{{ isEditMode ? 'Edit Event' : 'Create New Event' }}</h3>
+    <button class="close-btn" @click="cancelEdit">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
+
+<button v-if="isEditMode" type="button" class="btn btn-secondary" @click="cancelEdit" style="margin-left: 10px;">
+    Cancel Edit
+</button>
+
                         
                         <form @submit.prevent="createEvent" class="auth-form">
                             <div class="form-group">
