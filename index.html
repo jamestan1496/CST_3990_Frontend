@@ -2541,22 +2541,12 @@ handleImageLoad(event) {
                 
                 // Real-time functionality
                 initializeSocket() {
-                    if (typeof io !== 'undefined') {
-                        this.socket = io('https://cst-3990-backend-f533.onrender.com/api');
-                        
-                        this.socket.on('checkin_update', (data) => {
-                            this.showNotification(`${data.attendeeName} checked in!`, 'success');
-                        });
-                        
-                        this.socket.on('session_join', (data) => {
-                            this.showNotification(`Someone joined a session!`, 'info');
-                        });
-                         console.log('Socket.IO disabled to stop console spam');
+    console.log('Socket.IO disabled - no more localhost:5000 errors');
     this.socket = null;
     return;
                         
                     }
-                }
+                
             }
         }).mount('#app');
     </script>
