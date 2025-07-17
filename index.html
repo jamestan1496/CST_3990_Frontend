@@ -1132,6 +1132,152 @@
                         }
                     }
                 },
+    async editEvent(event) {
+        try {
+            // Load event data into form
+        this.eventForm = {
+            title: event.title,
+            description: event.description,
+            date: event.date.split('T')[0], // Convert to YYYY-MM-DD format
+            time: event.time,
+            location: event.location,
+            maxAttendees: event.maxAttendees,
+            sessions: [...event.sessions], // Copy sessions
+            image: null,
+            imagePreview: null
+        };
+        
+        // Store the event ID for updating
+        this.editingEventId = event._id;
+        
+        // Show the create event modal (we'll reuse it for editing)
+        this.showCreateEvent = true;
+        this.isEditMode = true;
+        
+    } catch (error) {
+        console.error('Edit event error:', error);
+        this.showNotification('Failed to load event for editing', 'error');
+    }
+},
+async updateEvent() {
+    this.authLoading = true;
+    try {
+        // Validate required fields
+        if (!this.eventForm.title || !this.eventForm.description || !this.eventForm.date || !this.eventForm.time || !this.eventForm.location) {
+            this.showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            this.showNotification('Please log in again', 'error');
+            return;
+        }
+
+        // Create FormData
+        const formData = new FormData();
+        formData.append('title', this.eventForm.title.trim());
+        formData.append('description', this.eventForm.description.trim());
+        formData.append('date', this.eventForm.date);
+        formData.append('time', this.eventForm.time);
+        formData.append('location', this.eventForm.location.trim());
+        formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
+        
+        if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
+            formData.append('sessions', JSON.stringify(this.eventForm.sessions));
+        }
+        
+        if (this.eventForm.image instanceof File) {
+            formData.append('image', this.eventForm.image);
+        }
+
+        // Send update request
+        const response = await axios.put(`${this.apiUrl}/events/${this.editingEventId}`, formData, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+            timeout: 30000
+        });
+
+        console.log('Event updated successfully:', response.data);
+        
+        // Close modal and reset
+        this.showCreateEvent = false;
+        this.isEditMode = false;
+        this.editingEventId = null;
+        this.resetEventForm();
+        
+        // Reload data
+        await this.loadDashboardData();
+        
+        this.showNotification('Event updated successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Update event error:', error);
+        
+        let errorMessage = 'Failed to update event';
+        if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+        } else if (error.request) {
+            errorMessage = 'No response from server';
+        }
+        
+        this.showNotification(errorMessage, 'error');
+        
+    } finally {
+        this.authLoading = false;
+    }
+},
+async deleteEvent(event) {
+    // Show confirmation dialog
+    const confirmDelete = confirm(
+        `Are you sure you want to delete "${event.title}"?\n\n` +
+        `This action cannot be undone and will remove all associated data.`
+    );
+    
+    if (!confirmDelete) {
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            this.showNotification('Please log in again', 'error');
+            return;
+        }
+
+        console.log('Deleting event:', event._id);
+
+        const response = await axios.delete(`${this.apiUrl}/events/${event._id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+            timeout: 15000
+        });
+
+        console.log('Event deleted successfully:', response.data);
+        
+        // Remove from local array
+        this.userEvents = this.userEvents.filter(e => e._id !== event._id);
+        
+        // Update stats
+        this.updateStats();
+        
+        this.showNotification('Event deleted successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Delete event error:', error);
+        
+        let errorMessage = 'Failed to delete event';
+        if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+        } else if (error.request) {
+            errorMessage = 'No response from server';
+        }
+        
+        this.showNotification(errorMessage, 'error');
+    }
+},
                 
                 // Copy QR Data for Demo
                 async copyQRData(event) {
@@ -1290,8 +1436,11 @@ debugAuthentication() {
     return { isValid: true };
 },
                 
-    async createEvent() {
-    console.log('=== FRONTEND CREATE EVENT START ===');
+    // REPLACE YOUR EXISTING createEvent METHOD WITH THIS MODIFIED VERSION
+
+async createEvent() {
+    console.log('=== CREATE/UPDATE EVENT START ===');
+    console.log('Is Edit Mode:', this.isEditMode);
     console.log('Event form data:', this.eventForm);
     
     this.authLoading = true;
@@ -1315,7 +1464,7 @@ debugAuthentication() {
         const hasConflicts = this.eventForm.sessions.some(session => session.conflict);
         if (hasConflicts) {
             console.log('Session conflicts detected');
-            this.showNotification('Please resolve session conflicts before creating the event', 'error');
+            this.showNotification('Please resolve session conflicts before saving the event', 'error');
             return;
         }
 
@@ -1333,7 +1482,7 @@ debugAuthentication() {
             console.log('Token payload:', payload);
             if (payload.role !== 'organizer') {
                 console.log('User is not an organizer:', payload.role);
-                this.showNotification('Only organizers can create events', 'error');
+                this.showNotification('Only organizers can create/edit events', 'error');
                 return;
             }
         } catch (parseError) {
@@ -1385,12 +1534,25 @@ debugAuthentication() {
         const apiUrl = this.apiUrl || 'https://cst-3990-backend-f533.onrender.com/api';
         console.log('API URL:', apiUrl);
         
-        // IMPORTANT: Make sure we're making a POST request to /events (not /events/:id)
-        const createEventUrl = `${apiUrl}/events`;
-        console.log('Making POST request to:', createEventUrl);
+        // DETERMINE IF WE'RE CREATING OR UPDATING
+        let url, method, successMessage;
+        
+        if (this.isEditMode && this.editingEventId) {
+            // UPDATE EXISTING EVENT
+            url = `${apiUrl}/events/${this.editingEventId}`;
+            method = 'put';
+            successMessage = 'Event updated successfully!';
+            console.log('Making PUT request to:', url);
+        } else {
+            // CREATE NEW EVENT
+            url = `${apiUrl}/events`;
+            method = 'post';
+            successMessage = 'Event created successfully!';
+            console.log('Making POST request to:', url);
+        }
 
         // Send request using FormData
-        const response = await axios.post(createEventUrl, formData, {
+        const response = await axios[method](url, formData, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 // Don't set Content-Type - let browser set it with boundary for FormData
@@ -1402,23 +1564,27 @@ debugAuthentication() {
             }
         });
         
-        console.log('=== FRONTEND CREATE EVENT SUCCESS ===');
+        console.log('=== EVENT OPERATION SUCCESS ===');
         console.log('Response:', response.data);
         
         // Close modal and reset form
         this.showCreateEvent = false;
         this.resetEventForm();
         
+        // Reset edit mode
+        this.isEditMode = false;
+        this.editingEventId = null;
+        
         // Reload dashboard data
         await this.loadDashboardData();
         
-        this.showNotification('Event created successfully!', 'success');
+        this.showNotification(successMessage, 'success');
         
     } catch (error) {
-        console.error('=== FRONTEND CREATE EVENT ERROR ===');
+        console.error('=== EVENT OPERATION ERROR ===');
         console.error('Error object:', error);
         
-        let errorMessage = 'Failed to create event';
+        let errorMessage = this.isEditMode ? 'Failed to update event' : 'Failed to create event';
         
         if (error.response) {
             // Server responded with error
@@ -1435,7 +1601,7 @@ debugAuthentication() {
                     }
                 }
             } else {
-                errorMessage = `Server error: ${error.response.status}`;
+                errorMessage += `: Server error ${error.response.status}`;
             }
         } else if (error.request) {
             // Request made but no response
@@ -1448,14 +1614,154 @@ debugAuthentication() {
         } else {
             // Error in request setup
             console.error('Request setup error:', error.message);
-            errorMessage = error.message || 'Failed to create event';
+            errorMessage = error.message || errorMessage;
         }
         
         this.showNotification(errorMessage, 'error');
         
     } finally {
         this.authLoading = false;
-        console.log('=== FRONTEND CREATE EVENT END ===');
+        console.log('=== EVENT OPERATION END ===');
+    }
+},
+editEvent(event) {
+    try {
+        console.log('Starting edit for event:', event._id);
+        
+        // Load event data into form
+        this.eventForm = {
+            title: event.title || '',
+            description: event.description || '',
+            date: event.date ? event.date.split('T')[0] : '', // Convert to YYYY-MM-DD format
+            time: event.time || '',
+            location: event.location || '',
+            maxAttendees: event.maxAttendees || 100,
+            sessions: event.sessions ? [...event.sessions] : [], // Copy sessions array
+            image: null, // Don't preload existing image
+            imagePreview: event.image ? this.getEventImageUrl(event.image) : null // Show existing image preview
+        };
+        
+        // Set edit mode
+        this.isEditMode = true;
+        this.editingEventId = event._id;
+        
+        // Show the modal
+        this.showCreateEvent = true;
+        
+        console.log('Edit mode activated for event:', event._id);
+        this.showNotification('Event loaded for editing', 'info');
+        
+    } catch (error) {
+        console.error('Error starting edit:', error);
+        this.showNotification('Failed to load event for editing', 'error');
+    }
+},
+
+// Method to cancel editing
+cancelEdit() {
+    this.isEditMode = false;
+    this.editingEventId = null;
+    this.showCreateEvent = false;
+    this.resetEventForm();
+    this.showNotification('Edit cancelled', 'info');
+},
+
+// Enhanced resetEventForm method
+resetEventForm() {
+    console.log('Resetting event form');
+    this.eventForm = {
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        location: '',
+        maxAttendees: 100,
+        sessions: [],
+        image: null,
+        imagePreview: null
+    };
+    
+    // Reset edit mode
+    this.isEditMode = false;
+    this.editingEventId = null;
+    
+    // Clear the file input if it exists
+    if (this.$refs.imageInput) {
+        this.$refs.imageInput.value = '';
+    }
+},
+
+// Method to delete an event
+async deleteEvent(event) {
+    // Show confirmation dialog
+    const confirmDelete = confirm(
+        `Are you sure you want to delete "${event.title}"?\n\n` +
+        `This action cannot be undone and will remove:\n` +
+        `• The event and all its sessions\n` +
+        `• All registrations (if any)\n` +
+        `• All analytics data\n\n` +
+        `Type the event title to confirm: ${event.title}`
+    );
+    
+    if (!confirmDelete) {
+        return;
+    }
+    
+    // Additional confirmation for events with registrations
+    if (event.registrationCount && event.registrationCount > 0) {
+        const secondConfirm = confirm(
+            `⚠️ WARNING: This event has ${event.registrationCount} registered attendees!\n\n` +
+            `Are you absolutely sure you want to delete it?`
+        );
+        
+        if (!secondConfirm) {
+            return;
+        }
+    }
+    
+    try {
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            this.showNotification('Please log in again', 'error');
+            return;
+        }
+
+        console.log('Deleting event:', event._id);
+        this.showNotification('Deleting event...', 'info');
+
+        const response = await axios.delete(`${this.apiUrl}/events/${event._id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+            timeout: 15000
+        });
+
+        console.log('Event deleted successfully:', response.data);
+        
+        // Remove from local array immediately for better UX
+        this.userEvents = this.userEvents.filter(e => e._id !== event._id);
+        
+        // Update stats
+        this.updateStats();
+        
+        this.showNotification('Event deleted successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Delete event error:', error);
+        
+        let errorMessage = 'Failed to delete event';
+        if (error.response?.status === 400) {
+            errorMessage = error.response.data?.error || 'Cannot delete event with registered attendees';
+        } else if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+        } else if (error.request) {
+            errorMessage = 'No response from server';
+        }
+        
+        this.showNotification(errorMessage, 'error');
+        
+        // Reload data in case of error to ensure consistency
+        await this.loadDashboardData();
     }
 },
 // Image upload handling
