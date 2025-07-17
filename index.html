@@ -136,6 +136,8 @@
                         <div class="dashboard-header">
                             <h2>Welcome, {{ currentUser.firstName }}!</h2>
                             <p>{{ currentUser.role === 'organizer' ? 'Manage your events and track attendance' : 'Discover events and connect with professionals' }}</p>
+                            <div style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 10px;">
+        
                         </div>
                         
                         <!-- Stats -->
@@ -176,7 +178,9 @@
                                     <i class="fas fa-search"></i> Discover Events
                                 </button>
                             </div>
-                            
+                            <button v-if="isEditMode" type="button" class="btn btn-secondary" @click="cancelEdit">
+    Cancel Edit
+</button>
                             <div class="events-grid" v-if="userEvents.length > 0">
                                 <div v-for="event in userEvents" :key="event._id" class="event-card">
                                     <div class="event-card-header">
@@ -195,6 +199,30 @@
                                         <button class="btn btn-secondary btn-small" @click="viewEvent(event)">
                                             <i class="fas fa-eye"></i> View
                                         </button>
+                                        <button v-if="currentUser.role === 'organizer'" 
+                                            class="btn btn-primary btn-small" 
+                                             @click="editEvent(event)">
+                                                <i class="fas fa-edit"></i> Edit
+                                        </button>
+    
+                                        <button v-if="currentUser.role === 'organizer'" 
+                                        class="btn btn-danger btn-small" 
+                                        @click="deleteEvent(event)">
+                                        <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                        
+                                        <button v-if="currentUser.role === 'organizer'" class="btn btn-secondary btn-small" @click="viewGuests(event)">
+                                            <i class="fas fa-users"></i> Guests
+                                        </button>
+                                        
+                                        <button v-if="currentUser.role === 'organizer'" class="btn btn-secondary btn-small" @click="performClustering(event)">
+                                            <i class="fas fa-layer-group"></i> Cluster
+                                        </button>
+                                        
+                                        <button v-if="currentUser.role === 'organizer'" class="btn btn-secondary btn-small" @click="viewSessionAnalytics(event)">
+                                            <i class="fas fa-chart-bar"></i> Analytics
+                                        </button>
+                                        
                                         <button v-if="currentUser.role === 'attendee' && !event.checkedIn && event.status === 'live'" class="btn btn-success btn-small" @click="checkIn(event)">
                                             <i class="fas fa-check"></i> Check In
                                         </button>
@@ -224,74 +252,74 @@
                         </div>
                         
                         <!-- Filters -->
-                        <div class="filters">
-                            <div class="filter-group">
-                                <label>Search:</label>
-                                <input type="text" v-model="eventFilters.search" placeholder="Search events...">
-                            </div>
-                            
-                            <div class="filter-group">
-                                <label>Status:</label>
-                                <select v-model="eventFilters.status">
-                                    <option value="">All</option>
-                                    <option value="upcoming">Upcoming</option>
-                                    <option value="live">Live</option>
-                                    <option value="completed">Completed</option>
-                                </select>
-                            </div>
-                            
-                            <button class="btn btn-primary btn-small" @click="loadEvents">
-                                <i class="fas fa-search"></i> Search
-                            </button>
-                        </div>
+             <div class="filters">
+            <div class="filter-group">
+                <label>Search:</label>
+                <input type="text" v-model="eventFilters.search" placeholder="Search events...">
+            </div>
+            
+            <div class="filter-group">
+                <label>Status:</label>
+                <select v-model="eventFilters.status">
+                    <option value="">All</option>
+                    <option value="upcoming">Upcoming</option>
+                    <option value="live">Live</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            
+            <button class="btn btn-primary btn-small" @click="loadEvents">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
                         
-                        <div v-if="filteredEvents && filteredEvents.length > 0" class="events-grid">
-                            <div v-for="event in filteredEvents" :key="event._id" class="event-card">
-                                <div class="event-card-header">
-                                    <h4>{{ event.title }}</h4>
-                                    <div class="event-meta">
-                                        <span><i class="fas fa-calendar"></i> {{ formatDate(event.date) }}</span>
-                                        <span><i class="fas fa-clock"></i> {{ event.time }}</span>
-                                        <span><i class="fas fa-map-marker-alt"></i> {{ event.location }}</span>
-                                    </div>
-                                    <span class="event-status" :class="'status-' + event.status">
-                                        {{ event.status }}
-                                    </span>
-                                </div>
-                                
-                                <div class="event-actions">
-                                    <button class="btn btn-secondary btn-small" @click="viewEvent(event)">
-                                        <i class="fas fa-eye"></i> View
-                                    </button>
-                                    
-                                    <button v-if="!isRegistered(event)" class="btn btn-primary btn-small" @click="registerForEvent(event)">
-                                        <i class="fas fa-plus"></i> Register
-                                    </button>
-                                    
-                                    <span v-else class="btn btn-success btn-small">
-                                        <i class="fas fa-check"></i> Registered
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                       <div v-if="filteredEvents && filteredEvents.length > 0" class="events-grid">
+            <div v-for="event in filteredEvents" :key="event._id" class="event-card">
+                <div class="event-card-header">
+                    <h4>{{ event.title }}</h4>
+                    <div class="event-meta">
+                        <span><i class="fas fa-calendar"></i> {{ formatDate(event.date) }}</span>
+                        <span><i class="fas fa-clock"></i> {{ event.time }}</span>
+                        <span><i class="fas fa-map-marker-alt"></i> {{ event.location }}</span>
+                    </div>
+                    <span class="event-status" :class="'status-' + event.status">
+                        {{ event.status }}
+                    </span>
+                </div>
+                
+                <div class="event-actions">
+                    <button class="btn btn-secondary btn-small" @click="viewEvent(event)">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    
+                    <button v-if="!isRegistered(event)" class="btn btn-primary btn-small" @click="registerForEvent(event)">
+                        <i class="fas fa-plus"></i> Register
+                    </button>
+                    
+                    <span v-else class="btn btn-success btn-small">
+                        <i class="fas fa-check"></i> Registered
+                    </span>
+                </div>
+            </div>
+        </div>
                         
                         <div v-else-if="allEvents && allEvents.length === 0" class="empty-state">
-                            <i class="fas fa-search"></i>
-                            <h3>No events available</h3>
-                            <p>There are currently no events to display. Check back later!</p>
-                        </div>
-                        
-                        <!-- Filtered Results Empty -->
-                        <div v-else class="empty-state">
-                            <i class="fas fa-filter"></i>
-                            <h3>No events match your filters</h3>
-                            <p>Try adjusting your search criteria</p>
-                            <button class="btn btn-secondary" @click="eventFilters.search = ''; eventFilters.status = ''">
-                                Clear Filters
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <i class="fas fa-search"></i>
+            <h3>No events available</h3>
+            <p>There are currently no events to display. Check back later!</p>
+        </div>
+        
+        <!-- Filtered Results Empty -->
+        <div v-else class="empty-state">
+            <i class="fas fa-filter"></i>
+            <h3>No events match your filters</h3>
+            <p>Try adjusting your search criteria</p>
+            <button class="btn btn-secondary" @click="eventFilters.search = ''; eventFilters.status = ''">
+                Clear Filters
+            </button>
+        </div>
+    </div>
+</div>
 
                 <!-- Profile Page -->
                 <div v-if="currentView === 'profile' && currentUser">
@@ -302,124 +330,175 @@
                         </div>
                         
                         <div class="profile-container">
-                            <div class="profile-card">
-                                <!-- Profile Header -->
-                                <div class="profile-header">
-                                    <div class="profile-avatar">
-                                        <i class="fas fa-user-circle" style="font-size: 4rem; color: white;"></i>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>{{ currentUser.firstName }} {{ currentUser.lastName }}</h3>
-                                        <p>{{ currentUser.email }}</p>
-                                        <span class="role-badge">{{ currentUser.role }}</span>
-                                    </div>
-                                </div>
+            <div class="profile-card">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user-circle" style="font-size: 4rem; color: #007bff;"></i>
+                    </div>
+                    <div class="profile-info">
+                        <h3>{{ currentUser.firstName }} {{ currentUser.lastName }}</h3>
+                        <p>{{ currentUser.email }}</p>
+                        <span class="role-badge">{{ currentUser.role }}</span>
+                    </div>
+                </div>
                                 
-                                <div class="profile-content">
-                                    <!-- Personal Information -->
-                                    <div class="profile-section">
-                                        <div class="section-header">
-                                            <h4>Personal Information</h4>
-                                            <button class="btn btn-secondary btn-small" @click="toggleEdit('personal')">
-                                                <i class="fas fa-edit"></i> {{ editMode.personal ? 'Cancel' : 'Edit' }}
-                                            </button>
-                                        </div>
+                               <div class="profile-content">
+                    <!-- Personal Information -->
+                    <div class="profile-section">
+                        <div class="section-header">
+                            <h4>Personal Information</h4>
+                            <button class="btn btn-secondary btn-small" @click="toggleEdit('personal')">
+                                <i class="fas fa-edit"></i> {{ editMode.personal ? 'Cancel' : 'Edit' }}
+                            </button>
+                        </div>
                                         
                                         <div v-if="!editMode.personal" class="profile-details">
-                                            <div class="detail-item">
-                                                <label><strong>First Name:</strong></label>
-                                                <span>{{ currentUser.firstName || 'Not set' }}</span>
-                                            </div>
-                                            <div class="detail-item">
-                                                <label><strong>Last Name:</strong></label>
-                                                <span>{{ currentUser.lastName || 'Not set' }}</span>
-                                            </div>
-                                            <div class="detail-item">
-                                                <label><strong>Email:</strong></label>
-                                                <span>{{ currentUser.email || 'Not set' }}</span>
-                                            </div>
-                                            <div class="detail-item">
-                                                <label><strong>Username:</strong></label>
-                                                <span>{{ currentUser.username || 'Not set' }}</span>
-                                            </div>
-                                        </div>
+                            <div class="detail-item">
+                                <label><strong>First Name:</strong></label>
+                                <span>{{ currentUser.firstName || 'Not set' }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label><strong>Last Name:</strong></label>
+                                <span>{{ currentUser.lastName || 'Not set' }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label><strong>Email:</strong></label>
+                                <span>{{ currentUser.email || 'Not set' }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label><strong>Username:</strong></label>
+                                <span>{{ currentUser.username || 'Not set' }}</span>
+                            </div>
+                        </div>
+                        
                                         
                                         <form v-else @submit.prevent="updateProfile('personal')" class="profile-form">
-                                            <div class="form-group">
-                                                <label>First Name</label>
-                                                <input type="text" v-model="editData.firstName" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Last Name</label>
-                                                <input type="text" v-model="editData.lastName" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Email</label>
-                                                <input type="email" v-model="editData.email" required readonly>
-                                                <small>Email cannot be changed</small>
-                                            </div>
-                                            <div class="form-actions">
-                                                <button type="submit" class="btn btn-primary btn-small" :disabled="profileLoading">
-                                                    <span v-if="profileLoading">⏳</span>
-                                                    Save Changes
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
+                            <div class="form-group">
+                                <label>First Name</label>
+                                <input type="text" v-model="editData.firstName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name</label>
+                                <input type="text" v-model="editData.lastName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" v-model="editData.email" required readonly>
+                                <small>Email cannot be changed</small>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary btn-small" :disabled="profileLoading">
+                                    <span v-if="profileLoading">⏳</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                                    
+                                    <div class="profile-section">
+                        <div class="section-header">
+                            <h4>Professional Information</h4>
+                            <button class="btn btn-secondary btn-small" @click="toggleEdit('professional')">
+                                <i class="fas fa-edit"></i> {{ editMode.professional ? 'Cancel' : 'Edit' }}
+                            </button>
+                        </div>
+                                        
+                                        <div v-if="!editMode.professional" class="profile-details">
+                            <div class="detail-item">
+                                <label><strong>Professional Role:</strong></label>
+                                <span>{{ currentUser.professionalRole || 'Not set' }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label><strong>Interests:</strong></label>
+                                <div class="interests-display">
+                                    <span v-if="currentUser.interests && currentUser.interests.length > 0" 
+                                          v-for="interest in currentUser.interests" 
+                                          :key="interest" 
+                                          class="interest-tag">
+                                        {{ interest }}
+                                    </span>
+                                    <span v-else>No interests set</span>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <label><strong>Account Type:</strong></label>
+                                <span class="role-badge">{{ currentUser.role }}</span>
+                            </div>
+                        </div>
+                                        
+                                        <form v-else @submit.prevent="updateProfile('professional')" class="profile-form">
+                            <div class="form-group">
+                                <label>Professional Role</label>
+                                <input type="text" v-model="editData.professionalRole" placeholder="e.g., Software Engineer">
+                            </div>
+                            <div class="form-group">
+                                <label>Add Interest</label>
+                                <input type="text" v-model="newInterest" @keyup.enter="addInterest" placeholder="Type and press Enter">
+                                <div class="interests-tags" v-if="editData.interests && editData.interests.length > 0">
+                                    <span v-for="interest in editData.interests" :key="interest" class="interest-tag">
+                                        {{ interest }}
+                                        <button type="button" @click="removeInterest(interest)">&times;</button>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary btn-small" :disabled="profileLoading">
+                                    <span v-if="profileLoading">⏳</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                                    <div class="profile-section">
+                                        <div class="section-header">
+                                            <h4>Account Statistics</h4>
+                                        </div>
+                                        
+                                        <div class="profile-section">
+                        <h4>Account Statistics</h4>
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">{{ userEvents?.length || 0 }}</div>
+                                <div class="stat-label">{{ currentUser.role === 'organizer' ? 'Events Created' : 'Events Registered' }}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ Math.floor(Math.random() * 20) + 5 }}</div>
+                                <div class="stat-label">Connections</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ new Date().getFullYear() }}</div>
+                                <div class="stat-label">Member Since</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
                                     
                                     <div class="profile-section">
                                         <div class="section-header">
-                                            <h4>Professional Information</h4>
-                                            <button class="btn btn-secondary btn-small" @click="toggleEdit('professional')">
-                                                <i class="fas fa-edit"></i> {{ editMode.professional ? 'Cancel' : 'Edit' }}
-                                            </button>
+                                            <h4>Recent Activity</h4>
                                         </div>
                                         
-                                        <div v-if="!editMode.professional" class="profile-details">
-                                            <div class="detail-item">
-                                                <label><strong>Professional Role:</strong></label>
-                                                <span>{{ currentUser.professionalRole || 'Not set' }}</span>
-                                            </div>
-                                            <div class="detail-item">
-                                                <label><strong>Interests:</strong></label>
-                                                <div class="interests-display">
-                                                    <span v-if="currentUser.interests && currentUser.interests.length > 0" 
-                                                          v-for="interest in currentUser.interests" 
-                                                          :key="interest" 
-                                                          class="interest-tag">
-                                                        {{ interest }}
-                                                    </span>
-                                                    <span v-else>No interests set</span>
+                                        <div class="activity-list">
+                                            <div v-for="activity in recentActivity" :key="activity.id" class="activity-item">
+                                                <div class="activity-icon">
+                                                    <i :class="activity.icon"></i>
+                                                </div>
+                                                <div class="activity-content">
+                                                    <div class="activity-title">{{ activity.title }}</div>
+                                                    <div class="activity-time">{{ activity.time }}</div>
                                                 </div>
                                             </div>
-                                            <div class="detail-item">
-                                                <label><strong>Account Type:</strong></label>
-                                                <span class="role-badge">{{ currentUser.role }}</span>
+                                            
+                                            <div v-if="recentActivity.length === 0" class="empty-state">
+                                                <i class="fas fa-clock"></i>
+                                                <p>No recent activity</p>
                                             </div>
                                         </div>
-                                        
-                                        <form v-else @submit.prevent="updateProfile('professional')" class="profile-form">
-                                            <div class="form-group">
-                                                <label>Professional Role</label>
-                                                <input type="text" v-model="editData.professionalRole" placeholder="e.g., Software Engineer">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Add Interest</label>
-                                                <input type="text" v-model="newInterest" @keyup.enter="addInterest" placeholder="Type and press Enter">
-                                                <div class="interests-tags" v-if="editData.interests && editData.interests.length > 0">
-                                                    <span v-for="interest in editData.interests" :key="interest" class="interest-tag">
-                                                        {{ interest }}
-                                                        <button type="button" @click="removeInterest(interest)">&times;</button>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="form-actions">
-                                                <button type="submit" class="btn btn-primary btn-small" :disabled="profileLoading">
-                                                    <span v-if="profileLoading">⏳</span>
-                                                    Save Changes
-                                                </button>
-                                            </div>
-                                        </form>
                                     </div>
                                 </div>
                             </div>
@@ -435,6 +514,15 @@
                             <button class="close-btn" @click="selectedEvent = null">
                                 <i class="fas fa-times"></i>
                             </button>
+                        </div>
+                        <div v-if="selectedEvent.image" class="event-image-container" style="margin: 1rem 0;">
+                            <img 
+                                :src="getEventImageUrl(selectedEvent.image)" 
+                                :alt="selectedEvent.title"
+                                style="width: 100%; max-width: 400px; height: 200px; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                                @error="handleImageError"
+                                @load="handleImageLoad"
+                            >
                         </div>
 
                         <div class="event-meta">
@@ -467,12 +555,8 @@
                         
                         <div v-if="currentUser.role === 'attendee' && isRegistered(selectedEvent)" class="qr-code">
                             <h4>Your QR Code</h4>
-                            <div style="text-align: center; margin: 1rem 0;">
-                                <p>Show this at the event entrance for check-in</p>
-                                <button class="btn btn-primary" @click="copyQRData(selectedEvent)">
-                                    <i class="fas fa-copy"></i> Copy QR Data (Demo)
-                                </button>
-                            </div>
+                            <img :src="selectedEvent.qrCode || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='" alt="QR Code" style="width: 200px; height: 200px; background: white; border: 2px solid #333; display: flex; align-items: center; justify-content: center;">
+                            <p style="font-size: 0.9rem; opacity: 0.8;">Show this QR code at the event entrance</p>
                         </div>
                     </div>
                 </div>
@@ -481,11 +565,16 @@
                 <div v-if="showCreateEvent" class="modal">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h3>{{ isEditMode ? 'Edit Event' : 'Create New Event' }}</h3>
-                            <button class="close-btn" @click="cancelEdit">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
+    <h3>{{ isEditMode ? 'Edit Event' : 'Create New Event' }}</h3>
+    <button class="close-btn" @click="cancelEdit">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
+
+<button v-if="isEditMode" type="button" class="btn btn-secondary" @click="cancelEdit" style="margin-left: 10px;">
+    Cancel Edit
+</button>
+
                         
                         <form @submit.prevent="createEvent" class="auth-form">
                             <div class="form-group">
@@ -514,6 +603,17 @@
                             </div>
                             
                             <div class="form-group">
+                                <label>Event Image (Optional)</label>
+                                <input type="file" ref="imageInput" @change="handleImageUpload" accept="image/*">
+                                <div v-if="eventForm.imagePreview" class="image-preview">
+                                    <img :src="eventForm.imagePreview" alt="Event preview" style="max-width: 200px; border-radius: 10px;">
+                                    <button type="button" @click="removeImage" class="btn btn-danger btn-small">
+                                        <i class="fas fa-times"></i> Remove
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
                                 <label>Max Attendees</label>
                                 <input type="number" v-model="eventForm.maxAttendees" min="1" value="100">
                             </div>
@@ -532,11 +632,15 @@
                                             <input type="text" v-model="session.title" placeholder="Session title" required>
                                             <input type="text" v-model="session.speaker" placeholder="Speaker name">
                                             <div class="time-inputs">
-                                                <input type="time" v-model="session.startTime" required>
+                                                <input type="time" v-model="session.startTime" @change="validateSessionTimes" required>
                                                 <span>to</span>
-                                                <input type="time" v-model="session.endTime" required>
+                                                <input type="time" v-model="session.endTime" @change="validateSessionTimes" required>
                                             </div>
                                             <textarea v-model="session.description" placeholder="Session description" rows="2"></textarea>
+                                        </div>
+                                        <div v-if="session.conflict" class="conflict-warning">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Time conflict detected! {{ session.conflict }}
                                         </div>
                                     </div>
                                     
@@ -547,12 +651,44 @@
                                     <button type="button" @click="addSampleSessions" class="btn btn-secondary btn-small">
                                         <i class="fas fa-magic"></i> Add Sample Sessions
                                     </button>
+                                    
+                                    <div class="scheduling-tools">
+                                        <button type="button" @click="autoScheduleSessions" class="btn btn-secondary btn-small">
+                                            <i class="fas fa-magic"></i> Auto-Schedule Sessions
+                                        </button>
+                                        <button type="button" @click="optimizeSchedule" class="btn btn-secondary btn-small">
+                                            <i class="fas fa-cogs"></i> Optimize Schedule
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Schedule Timeline View -->
+                                    <div v-if="eventForm.sessions.length > 0" class="schedule-timeline">
+                                        <h5>Schedule Timeline</h5>
+                                        <div class="timeline-container">
+                                            <div v-for="(session, index) in sortedSessions" :key="index" 
+                                                 class="timeline-item" 
+                                                 :class="{ 'has-conflict': session.conflict }">
+                                                <div class="timeline-time">
+                                                    {{ session.startTime }} - {{ session.endTime }}
+                                                </div>
+                                                <div class="timeline-content">
+                                                    <strong>{{ session.title || 'Untitled Session' }}</strong>
+                                                    <div v-if="session.speaker" class="timeline-speaker">
+                                                        <i class="fas fa-user"></i> {{ session.speaker }}
+                                                    </div>
+                                                    <div v-if="session.description" class="timeline-description">
+                                                        {{ session.description }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
                             <button type="submit" class="btn btn-primary" :disabled="authLoading">
                                 <span v-if="authLoading" class="loading-spinner"></span>
-                                {{ isEditMode ? 'Update Event' : 'Create Event' }}
+                                Create Event
                             </button>
                         </form>
                     </div>
@@ -572,15 +708,55 @@
                         <div class="qr-scanner">
                             <h4>QR Code Check-In</h4>
                             
-                            <!-- Manual Input -->
-                            <div class="manual-scanner">
+                            <!-- Camera Scanner -->
+                            <div class="camera-scanner">
+                                <div class="scanner-controls">
+                                    <button v-if="!cameraActive" @click="startCamera" class="btn btn-primary btn-small">
+                                        <i class="fas fa-camera"></i> Start Camera Scanner
+                                    </button>
+                                    <button v-if="cameraActive" @click="stopCamera" class="btn btn-danger btn-small">
+                                        <i class="fas fa-stop"></i> Stop Camera
+                                    </button>
+                                    <button @click="toggleScannerMode" class="btn btn-secondary btn-small">
+                                        <i class="fas fa-exchange-alt"></i> 
+                                        {{ showManualInput ? 'Use Camera' : 'Manual Input' }}
+                                    </button>
+                                </div>
+                                
+                                <!-- Camera Video -->
+                                <div v-if="cameraActive" class="camera-container">
+                                    <video ref="cameraVideo" autoplay playsinline muted style="width: 100%; max-width: 400px; border-radius: 10px;"></video>
+                                    <canvas ref="cameraCanvas" style="display: none;"></canvas>
+                                    <div class="scan-overlay">
+                                        <div class="scan-frame">
+                                            <div class="scan-corners"></div>
+                                        </div>
+                                        <p style="color: white; text-align: center; margin-top: 1rem;">
+                                            <i class="fas fa-qrcode"></i> Point camera at QR code
+                                        </p>
+                                    </div>
+                                    <div v-if="scanStatus" class="scan-status" :class="scanStatus.type">
+                                        {{ scanStatus.message }}
+                                    </div>
+                                </div>
+                                
+                                <!-- Camera Errors -->
+                                <div v-if="cameraError" class="camera-error">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    {{ cameraError }}
+                                </div>
+                            </div>
+                            
+                            <!-- Manual Input (fallback) -->
+                            <div v-if="showManualInput" class="manual-scanner">
                                 <h5>Manual QR Data Input</h5>
                                 <div style="display: flex; gap: 1rem; align-items: flex-end;">
                                     <div style="flex: 1;">
                                         <textarea 
                                             v-model="qrScanInput" 
                                             @input="processQRScan" 
-                                            placeholder="Paste QR code data here..."
+                                            placeholder="Paste QR code data here or scan with camera above..."
+                                            class="qr-scanner-input"
                                             rows="3">
                                         </textarea>
                                     </div>
@@ -637,6 +813,115 @@
                     </div>
                 </div>
 
+                <!-- Session Analytics Modal -->
+                <div v-if="showAnalytics" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Session Analytics</h3>
+                            <button class="close-btn" @click="showAnalytics = false">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="analytics-container">
+                            <div class="analytics-stats">
+                                <div class="stat-card">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <h3>{{ analyticsData.totalSessions }}</h3>
+                                    <p>Total Sessions</p>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <i class="fas fa-clock"></i>
+                                    <h3>{{ analyticsData.avgDuration }}</h3>
+                                    <p>Avg Session Duration</p>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <i class="fas fa-users"></i>
+                                    <h3>{{ analyticsData.avgAttendance }}</h3>
+                                    <p>Avg Attendance</p>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <i class="fas fa-star"></i>
+                                    <h3>{{ analyticsData.popularSession }}</h3>
+                                    <p>Most Popular Session</p>
+                                </div>
+                            </div>
+                            
+                            <div class="session-breakdown">
+                                <h4>Session Breakdown</h4>
+                                <div class="session-analytics-list">
+                                    <div v-for="session in analyticsData.sessions" :key="session.title" class="session-analytics-item">
+                                        <div class="session-info">
+                                            <strong>{{ session.title }}</strong>
+                                            <span class="session-time">{{ session.startTime }} - {{ session.endTime }}</span>
+                                        </div>
+                                        <div class="session-metrics">
+                                            <span class="metric">
+                                                <i class="fas fa-users"></i>
+                                                {{ session.attendance }} attendees
+                                            </span>
+                                            <span class="metric">
+                                                <i class="fas fa-clock"></i>
+                                                {{ session.duration }} min
+                                            </span>
+                                            <span class="metric">
+                                                <i class="fas fa-percentage"></i>
+                                                {{ session.engagementRate }}% engaged
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="optimization-suggestions">
+                                <h4>AI-Powered Optimization Suggestions</h4>
+                                <div class="suggestions-list">
+                                    <div v-for="suggestion in analyticsData.suggestions" :key="suggestion.id" class="suggestion-item">
+                                        <i class="fas fa-lightbulb"></i>
+                                        <span>{{ suggestion.text }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clustering Results Modal -->
+                <div v-if="showClustering" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>AI Clustering Results</h3>
+                            <button class="close-btn" @click="showClustering = false">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div v-if="clusteringResults.length > 0" class="cluster-grid">
+                            <div v-for="cluster in clusteringResults" :key="cluster.name" class="cluster-card">
+                                <div class="cluster-header">
+                                    <h4>{{ formatClusterName(cluster.name) }}</h4>
+                                    <span class="cluster-size">{{ cluster.size }} members</span>
+                                </div>
+                                
+                                <div class="cluster-members">
+                                    <span v-for="member in cluster.members" :key="member.id" class="member-badge">
+                                        {{ member.name }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div v-else class="empty-state">
+                            <i class="fas fa-layer-group"></i>
+                            <h3>No clustering results</h3>
+                            <p>Run clustering to see results here</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </main>
 
@@ -663,8 +948,6 @@
                     showClustering: false,
                     showAnalytics: false,
                     isRegistering: false,
-                    isEditMode: false, // ← ADD THIS MISSING PROPERTY
-                    editingEventId: null, // ← ADD THIS TOO
                     loginRole: 'attendee',
                     authLoading: false,
                     
@@ -707,6 +990,24 @@
                     profileLoading: false,
                     newInterest: '',
                     qrScanInput: '',
+                    qrCodeGenerated: false,
+                    showQRFallback: false,
+                    fallbackQRUrl: '',
+                    
+                    // Camera Scanner
+                    cameraActive: false,
+                    cameraStream: null,
+                    cameraError: null,
+                    scanStatus: null,
+                    showManualInput: true,
+                    scanningInterval: null,
+                    
+                    profileStats: {
+                        totalEvents: 0,
+                        totalConnections: 0,
+                        memberSince: ''
+                    },
+                    recentActivity: [],
                     
                     // Data
                     userEvents: [],
@@ -745,33 +1046,53 @@
             },
             
             computed: {
-                filteredEvents() {
-                    if (!this.allEvents || this.allEvents.length === 0) {
-                        return [];
-                    }
-                    
-                    let filtered = [...this.allEvents];
-                    
-                    if (this.eventFilters.search && this.eventFilters.search.trim()) {
-                        const searchTerm = this.eventFilters.search.toLowerCase().trim();
-                        filtered = filtered.filter(event => 
-                            (event.title && event.title.toLowerCase().includes(searchTerm)) ||
-                            (event.description && event.description.toLowerCase().includes(searchTerm)) ||
-                            (event.location && event.location.toLowerCase().includes(searchTerm))
-                        );
-                    }
-                    
-                    if (this.eventFilters.status && this.eventFilters.status.trim()) {
-                        filtered = filtered.filter(event => event.status === this.eventFilters.status);
-                    }
-                    
-                    return filtered;
+               filteredEvents() {
+        if (!this.allEvents || this.allEvents.length === 0) {
+            return [];
+        }
+        
+        let filtered = [...this.allEvents];
+        
+        if (this.eventFilters.search && this.eventFilters.search.trim()) {
+            const searchTerm = this.eventFilters.search.toLowerCase().trim();
+            filtered = filtered.filter(event => 
+                (event.title && event.title.toLowerCase().includes(searchTerm)) ||
+                (event.description && event.description.toLowerCase().includes(searchTerm)) ||
+                (event.location && event.location.toLowerCase().includes(searchTerm))
+            );
+        }
+        
+        if (this.eventFilters.status && this.eventFilters.status.trim()) {
+            filtered = filtered.filter(event => event.status === this.eventFilters.status);
+        }
+        
+        console.log('Filtered events:', filtered.length, 'out of', this.allEvents.length);
+        return filtered;
+                },
+                
+                sortedSessions() {
+                    return [...this.eventForm.sessions].sort((a, b) => {
+                        if (!a.startTime || !b.startTime) return 0;
+                        return a.startTime.localeCompare(b.startTime);
+                    });
                 }
             },
             
             mounted() {
                 this.loadUserFromStorage();
                 this.initializeSocket();
+                
+                // Add cleanup for camera when page is unloaded
+                window.addEventListener('beforeunload', () => {
+                    this.stopCamera();
+                });
+            },
+            
+            beforeUnmount() {
+                this.stopCamera();
+                if (this.socket) {
+                    this.socket.disconnect();
+                }
             },
             
             methods: {
@@ -793,12 +1114,238 @@
                         this.resetAuthForm();
                         
                         await this.loadDashboardData();
+                        await this.loadProfile();
                         
                         this.showNotification('Login successful!', 'success');
                     } catch (error) {
                         this.showNotification(error.response?.data?.error || 'Login failed', 'error');
                     } finally {
                         this.authLoading = false;
+                    }
+                },
+                
+                // Test QR Generation
+                testQRGeneration() {
+                    console.log('=== QR Generation Test ===');
+                    console.log('QRCode library available:', typeof QRCode !== 'undefined');
+                    console.log('Selected event:', this.selectedEvent);
+                    console.log('Current user:', this.currentUser);
+                    
+                    if (this.selectedEvent) {
+                        const canvasId = `qr-canvas-${this.selectedEvent._id}`;
+                        const canvas = document.getElementById(canvasId);
+                        console.log('Canvas element:', canvas);
+                        
+                        if (canvas) {
+                            console.log('Canvas width:', canvas.width);
+                            console.log('Canvas height:', canvas.height);
+                            
+                            // Try to generate a simple QR code
+                            if (typeof QRCode !== 'undefined') {
+                                QRCode.toCanvas(canvas, 'Test QR Code', {
+                                    width: 200,
+                                    margin: 2,
+                                    color: {
+                                        dark: '#000000',
+                                        light: '#FFFFFF'
+                                    }
+                                }).then(() => {
+                                    console.log('Test QR code generated successfully');
+                                    this.showNotification('Test QR code generated!', 'success');
+                                    this.qrCodeGenerated = true;
+                                }).catch(err => {
+                                    console.error('Test QR code generation failed:', err);
+                                    this.showNotification('Test QR failed: ' + err.message, 'error');
+                                });
+                            } else {
+                                this.showNotification('QRCode library not loaded', 'error');
+                            }
+                        } else {
+                            this.showNotification('Canvas not found', 'error');
+                        }
+                    }
+                },
+    async editEvent(event) {
+        try {
+            // Load event data into form
+        this.eventForm = {
+            title: event.title,
+            description: event.description,
+            date: event.date.split('T')[0], // Convert to YYYY-MM-DD format
+            time: event.time,
+            location: event.location,
+            maxAttendees: event.maxAttendees,
+            sessions: [...event.sessions], // Copy sessions
+            image: null,
+            imagePreview: null
+        };
+        
+        // Store the event ID for updating
+        this.editingEventId = event._id;
+        
+        // Show the create event modal (we'll reuse it for editing)
+        this.showCreateEvent = true;
+        this.isEditMode = true;
+        
+    } catch (error) {
+        console.error('Edit event error:', error);
+        this.showNotification('Failed to load event for editing', 'error');
+    }
+},
+async updateEvent() {
+    this.authLoading = true;
+    try {
+        // Validate required fields
+        if (!this.eventForm.title || !this.eventForm.description || !this.eventForm.date || !this.eventForm.time || !this.eventForm.location) {
+            this.showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            this.showNotification('Please log in again', 'error');
+            return;
+        }
+
+        // Create FormData
+        const formData = new FormData();
+        formData.append('title', this.eventForm.title.trim());
+        formData.append('description', this.eventForm.description.trim());
+        formData.append('date', this.eventForm.date);
+        formData.append('time', this.eventForm.time);
+        formData.append('location', this.eventForm.location.trim());
+        formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
+        
+        if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
+            formData.append('sessions', JSON.stringify(this.eventForm.sessions));
+        }
+        
+        if (this.eventForm.image instanceof File) {
+            formData.append('image', this.eventForm.image);
+        }
+
+        // Send update request
+        const response = await axios.put(`${this.apiUrl}/events/${this.editingEventId}`, formData, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+            timeout: 30000
+        });
+
+        console.log('Event updated successfully:', response.data);
+        
+        // Close modal and reset
+        this.showCreateEvent = false;
+        this.isEditMode = false;
+        this.editingEventId = null;
+        this.resetEventForm();
+        
+        // Reload data
+        await this.loadDashboardData();
+        
+        this.showNotification('Event updated successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Update event error:', error);
+        
+        let errorMessage = 'Failed to update event';
+        if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+        } else if (error.request) {
+            errorMessage = 'No response from server';
+        }
+        
+        this.showNotification(errorMessage, 'error');
+        
+    } finally {
+        this.authLoading = false;
+    }
+},
+async deleteEvent(event) {
+    // Show confirmation dialog
+    const confirmDelete = confirm(
+        `Are you sure you want to delete "${event.title}"?\n\n` +
+        `This action cannot be undone and will remove all associated data.`
+    );
+    
+    if (!confirmDelete) {
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            this.showNotification('Please log in again', 'error');
+            return;
+        }
+
+        console.log('Deleting event:', event._id);
+
+        const response = await axios.delete(`${this.apiUrl}/events/${event._id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+            timeout: 15000
+        });
+
+        console.log('Event deleted successfully:', response.data);
+        
+        // Remove from local array
+        this.userEvents = this.userEvents.filter(e => e._id !== event._id);
+        
+        // Update stats
+        this.updateStats();
+        
+        this.showNotification('Event deleted successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Delete event error:', error);
+        
+        let errorMessage = 'Failed to delete event';
+        if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+        } else if (error.request) {
+            errorMessage = 'No response from server';
+        }
+        
+        this.showNotification(errorMessage, 'error');
+    }
+},
+                
+                // Copy QR Data for Demo
+                async copyQRData(event) {
+                    try {
+                        const qrData = {
+                            eventId: event._id,
+                            userId: this.currentUser.id || this.currentUser._id,
+                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
+                            userEmail: this.currentUser.email,
+                            eventTitle: event.title,
+                            eventDate: event.date,
+                            eventLocation: event.location,
+                            registrationTime: new Date().toISOString(),
+                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
+                        };
+                        
+                        const qrDataString = JSON.stringify(qrData);
+                        await navigator.clipboard.writeText(qrDataString);
+                        this.showNotification('QR data copied to clipboard! Paste it in the organizer QR scanner.', 'success');
+                    } catch (error) {
+                        // Fallback for browsers that don't support clipboard API
+                        const qrData = {
+                            eventId: event._id,
+                            userId: this.currentUser.id || this.currentUser._id,
+                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
+                            userEmail: this.currentUser.email,
+                            eventTitle: event.title,
+                            eventDate: event.date,
+                            eventLocation: event.location,
+                            registrationTime: new Date().toISOString(),
+                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
+                        };
+                        
+                        console.log('QR Data (copy manually):', JSON.stringify(qrData));
+                        this.showNotification('Check console for QR data to copy manually', 'info');
                     }
                 },
                 
@@ -819,6 +1366,7 @@
                         this.resetAuthForm();
                         
                         await this.loadDashboardData();
+                        await this.loadProfile();
                         
                         this.showNotification('Registration successful!', 'success');
                     } catch (error) {
@@ -827,6 +1375,9 @@
                         this.authLoading = false;
                     }
                 },
+                
+
+
                 
                 logout() {
                     this.currentUser = null;
@@ -837,185 +1388,502 @@
                 },
                 
                 loadUserFromStorage() {
-                    const token = localStorage.getItem('eventhive_token');
-                    const user = localStorage.getItem('eventhive_user');
-                    
-                    if (token && user) {
-                        try {
-                            this.currentUser = JSON.parse(user);
-                            this.profileData = { ...this.currentUser };
-                            this.currentView = 'dashboard';
-                            this.loadDashboardData();
-                        } catch (error) {
-                            console.error('Failed to parse stored user data:', error);
-                            localStorage.removeItem('eventhive_token');
-                            localStorage.removeItem('eventhive_user');
-                        }
-                    }
-                },
+    const token = localStorage.getItem('eventhive_token');
+    const user = localStorage.getItem('eventhive_user');
+    
+    if (token && user) {
+        try {
+            this.currentUser = JSON.parse(user);
+            // Initialize profile data with current user data
+            this.profileData = { ...this.currentUser };
+            this.currentView = 'dashboard';
+            this.loadDashboardData();
+            this.loadProfile(); // Load full profile data
+        } catch (error) {
+            console.error('Failed to parse stored user data:', error);
+            localStorage.removeItem('eventhive_token');
+            localStorage.removeItem('eventhive_user');
+        }
+    }
+},
+
+                validateEventDateTime(date, time) {
+    const now = new Date();
+    const eventDate = new Date(date);
+    
+    // Check if date is valid
+    if (isNaN(eventDate.getTime())) {
+        return { isValid: false, error: 'Invalid date format' };
+    }
+    
+    // Validate time format if provided
+    if (time && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
+        return { isValid: false, error: 'Invalid time format. Use HH:MM format' };
+    }
+    
+    // Create full datetime for comparison
+    const [hours, minutes] = time ? time.split(':').map(Number) : [23, 59];
+    const eventDateTime = new Date(eventDate);
+    eventDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Event must be in the future (not just today, but actually in the future)
+    if (eventDateTime <= now) {
+        return { isValid: false, error: 'Event date and time must be in the future' };
+    }
+    
+    // Additional check: event must be at least 1 hour from now
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    if (eventDateTime < oneHourFromNow) {
+        return { isValid: false, error: 'Event must be scheduled at least 1 hour in advance' };
+    }
+    
+    return { isValid: true };
+},
                 
-                // Event Management
-                async createEvent() {
-                    this.authLoading = true;
-                    
-                    try {
-                        // Validate required fields
-                        if (!this.eventForm.title || !this.eventForm.description || !this.eventForm.date || !this.eventForm.time || !this.eventForm.location) {
-                            this.showNotification('Please fill in all required fields', 'error');
-                            return;
-                        }
+    // REPLACE YOUR EXISTING createEvent METHOD WITH THIS MODIFIED VERSION
 
-                        const token = localStorage.getItem('eventhive_token');
-                        if (!token) {
-                            this.showNotification('Please log in again', 'error');
-                            return;
-                        }
+async createEvent() {
+    console.log('=== CREATE/UPDATE EVENT START ===');
+    console.log('Is Edit Mode:', this.isEditMode);
+    console.log('Event form data:', this.eventForm);
+    
+    this.authLoading = true;
+    
+    try {
+        // Validate required fields first
+        if (!this.eventForm.title || !this.eventForm.description || !this.eventForm.date || !this.eventForm.time || !this.eventForm.location) {
+            const missingFields = [];
+            if (!this.eventForm.title) missingFields.push('title');
+            if (!this.eventForm.description) missingFields.push('description');
+            if (!this.eventForm.date) missingFields.push('date');
+            if (!this.eventForm.time) missingFields.push('time');
+            if (!this.eventForm.location) missingFields.push('location');
+            
+            console.log('Missing required fields:', missingFields);
+            this.showNotification(`Please fill in all required fields: ${missingFields.join(', ')}`, 'error');
+            return;
+        }
 
-                        // Create FormData
-                        const formData = new FormData();
-                        formData.append('title', this.eventForm.title.trim());
-                        formData.append('description', this.eventForm.description.trim());
-                        formData.append('date', this.eventForm.date);
-                        formData.append('time', this.eventForm.time);
-                        formData.append('location', this.eventForm.location.trim());
-                        formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
-                        
-                        if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
-                            formData.append('sessions', JSON.stringify(this.eventForm.sessions));
-                        }
+        // Validate sessions don't have conflicts
+        const hasConflicts = this.eventForm.sessions.some(session => session.conflict);
+        if (hasConflicts) {
+            console.log('Session conflicts detected');
+            this.showNotification('Please resolve session conflicts before saving the event', 'error');
+            return;
+        }
 
-                        // Determine if we're creating or updating
-                        let url, method, successMessage;
-                        
-                        if (this.isEditMode && this.editingEventId) {
-                            url = `${this.apiUrl}/events/${this.editingEventId}`;
-                            method = 'put';
-                            successMessage = 'Event updated successfully!';
-                        } else {
-                            url = `${this.apiUrl}/events`;
-                            method = 'post';
-                            successMessage = 'Event created successfully!';
-                        }
+        // Get the auth token
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            console.log('No auth token found');
+            this.showNotification('Please log in again', 'error');
+            return;
+        }
 
-                        const response = await axios[method](url, formData, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                            },
-                            timeout: 30000
-                        });
-                        
-                        // Close modal and reset
-                        this.showCreateEvent = false;
-                        this.resetEventForm();
-                        
-                        // Reload data
-                        await this.loadDashboardData();
-                        
-                        this.showNotification(successMessage, 'success');
-                        
-                    } catch (error) {
-                        console.error('Create/Update event error:', error);
-                        
-                        let errorMessage = this.isEditMode ? 'Failed to update event' : 'Failed to create event';
-                        if (error.response?.data?.error) {
-                            errorMessage = error.response.data.error;
-                        }
-                        
-                        this.showNotification(errorMessage, 'error');
-                        
-                    } finally {
-                        this.authLoading = false;
+        // Verify user role from token
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            console.log('Token payload:', payload);
+            if (payload.role !== 'organizer') {
+                console.log('User is not an organizer:', payload.role);
+                this.showNotification('Only organizers can create/edit events', 'error');
+                return;
+            }
+        } catch (parseError) {
+            console.log('Token parsing error:', parseError);
+            this.showNotification('Invalid authentication token. Please log in again.', 'error');
+            return;
+        }
+
+        // Create FormData object
+        const formData = new FormData();
+        
+        // Add required fields with validation
+        formData.append('title', this.eventForm.title.trim());
+        formData.append('description', this.eventForm.description.trim());
+        formData.append('date', this.eventForm.date);
+        formData.append('time', this.eventForm.time);
+        formData.append('location', this.eventForm.location.trim());
+        
+        // Add optional fields
+        if (this.eventForm.maxAttendees && this.eventForm.maxAttendees > 0) {
+            formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
+        }
+        
+        // Add sessions (must be JSON string for FormData)
+        if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
+            const validSessions = this.eventForm.sessions.filter(session => 
+                session.title && session.title.trim() && 
+                session.startTime && session.endTime
+            );
+            if (validSessions.length > 0) {
+                console.log('Adding sessions:', validSessions);
+                formData.append('sessions', JSON.stringify(validSessions));
+            }
+        }
+        
+        // Add image if present
+        if (this.eventForm.image instanceof File) {
+            console.log('Adding image file:', this.eventForm.image.name);
+            formData.append('image', this.eventForm.image);
+        }
+
+        // Log FormData contents for debugging
+        console.log('FormData contents:');
+        for (let [key, value] of formData.entries()) {
+            console.log(key, typeof value === 'string' ? value : 'File object');
+        }
+
+        // Make sure we're using the correct API URL
+        const apiUrl = this.apiUrl || 'https://cst-3990-backend-f533.onrender.com/api';
+        console.log('API URL:', apiUrl);
+        
+        // DETERMINE IF WE'RE CREATING OR UPDATING
+        let url, method, successMessage;
+        
+        if (this.isEditMode && this.editingEventId) {
+            // UPDATE EXISTING EVENT
+            url = `${apiUrl}/events/${this.editingEventId}`;
+            method = 'put';
+            successMessage = 'Event updated successfully!';
+            console.log('Making PUT request to:', url);
+        } else {
+            // CREATE NEW EVENT
+            url = `${apiUrl}/events`;
+            method = 'post';
+            successMessage = 'Event created successfully!';
+            console.log('Making POST request to:', url);
+        }
+
+        // Send request using FormData
+        const response = await axios[method](url, formData, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                // Don't set Content-Type - let browser set it with boundary for FormData
+            },
+            timeout: 30000, // 30 second timeout
+            onUploadProgress: (progressEvent) => {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                console.log('Upload progress:', percentCompleted + '%');
+            }
+        });
+        
+        console.log('=== EVENT OPERATION SUCCESS ===');
+        console.log('Response:', response.data);
+        
+        // Close modal and reset form
+        this.showCreateEvent = false;
+        this.resetEventForm();
+        
+        // Reset edit mode
+        this.isEditMode = false;
+        this.editingEventId = null;
+        
+        // Reload dashboard data
+        await this.loadDashboardData();
+        
+        this.showNotification(successMessage, 'success');
+        
+    } catch (error) {
+        console.error('=== EVENT OPERATION ERROR ===');
+        console.error('Error object:', error);
+        
+        let errorMessage = this.isEditMode ? 'Failed to update event' : 'Failed to create event';
+        
+        if (error.response) {
+            // Server responded with error
+            console.error('Server error response:', error.response);
+            console.error('Response status:', error.response.status);
+            console.error('Response data:', error.response.data);
+            
+            if (error.response.data?.error) {
+                errorMessage = error.response.data.error;
+                if (error.response.data.details) {
+                    console.error('Error details:', error.response.data.details);
+                    if (Array.isArray(error.response.data.details)) {
+                        errorMessage += ': ' + error.response.data.details.join(', ');
                     }
-                },
+                }
+            } else {
+                errorMessage += `: Server error ${error.response.status}`;
+            }
+        } else if (error.request) {
+            // Request made but no response
+            console.error('No response received:', error.request);
+            errorMessage = 'No response from server. Please check your internet connection.';
+        } else if (error.code === 'ECONNABORTED') {
+            // Request timeout
+            console.error('Request timeout');
+            errorMessage = 'Request timed out. Please try again.';
+        } else {
+            // Error in request setup
+            console.error('Request setup error:', error.message);
+            errorMessage = error.message || errorMessage;
+        }
+        
+        this.showNotification(errorMessage, 'error');
+        
+    } finally {
+        this.authLoading = false;
+        console.log('=== EVENT OPERATION END ===');
+    }
+},
+editEvent(event) {
+    try {
+        console.log('Starting edit for event:', event._id);
+        
+        // Load event data into form
+        this.eventForm = {
+            title: event.title || '',
+            description: event.description || '',
+            date: event.date ? event.date.split('T')[0] : '', // Convert to YYYY-MM-DD format
+            time: event.time || '',
+            location: event.location || '',
+            maxAttendees: event.maxAttendees || 100,
+            sessions: event.sessions ? [...event.sessions] : [], // Copy sessions array
+            image: null, // Don't preload existing image
+            imagePreview: event.image ? this.getEventImageUrl(event.image) : null // Show existing image preview
+        };
+        
+        // Set edit mode
+        this.isEditMode = true;
+        this.editingEventId = event._id;
+        
+        // Show the modal
+        this.showCreateEvent = true;
+        
+        console.log('Edit mode activated for event:', event._id);
+        this.showNotification('Event loaded for editing', 'info');
+        
+    } catch (error) {
+        console.error('Error starting edit:', error);
+        this.showNotification('Failed to load event for editing', 'error');
+    }
+},
 
-                editEvent(event) {
-                    try {
-                        // Load event data into form
-                        this.eventForm = {
-                            title: event.title || '',
-                            description: event.description || '',
-                            date: event.date ? event.date.split('T')[0] : '',
-                            time: event.time || '',
-                            location: event.location || '',
-                            maxAttendees: event.maxAttendees || 100,
-                            sessions: event.sessions ? [...event.sessions] : [],
-                            image: null,
-                            imagePreview: null
-                        };
-                        
-                        // Set edit mode
-                        this.isEditMode = true;
-                        this.editingEventId = event._id;
-                        
-                        // Show the modal
-                        this.showCreateEvent = true;
-                        
-                        this.showNotification('Event loaded for editing', 'info');
-                        
-                    } catch (error) {
-                        console.error('Error starting edit:', error);
-                        this.showNotification('Failed to load event for editing', 'error');
-                    }
-                },
+// Method to cancel editing
+cancelEdit() {
+    this.isEditMode = false;
+    this.editingEventId = null;
+    this.showCreateEvent = false;
+    this.resetEventForm();
+    this.showNotification('Edit cancelled', 'info');
+},
 
-                cancelEdit() {
-                    this.isEditMode = false;
-                    this.editingEventId = null;
-                    this.showCreateEvent = false;
-                    this.resetEventForm();
-                },
+// Enhanced resetEventForm method
+resetEventForm() {
+    console.log('Resetting event form');
+    this.eventForm = {
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        location: '',
+        maxAttendees: 100,
+        sessions: [],
+        image: null,
+        imagePreview: null
+    };
+    
+    // Reset edit mode
+    this.isEditMode = false;
+    this.editingEventId = null;
+    
+    // Clear the file input if it exists
+    if (this.$refs.imageInput) {
+        this.$refs.imageInput.value = '';
+    }
+},
 
-                async deleteEvent(event) {
-                    const confirmDelete = confirm(`Are you sure you want to delete "${event.title}"?`);
-                    
-                    if (!confirmDelete) {
-                        return;
-                    }
-                    
-                    try {
-                        const token = localStorage.getItem('eventhive_token');
-                        if (!token) {
-                            this.showNotification('Please log in again', 'error');
-                            return;
-                        }
+// Method to delete an event
+async deleteEvent(event) {
+    // Show confirmation dialog
+    const confirmDelete = confirm(
+        `Are you sure you want to delete "${event.title}"?\n\n` +
+        `This action cannot be undone and will remove:\n` +
+        `• The event and all its sessions\n` +
+        `• All registrations (if any)\n` +
+        `• All analytics data\n\n` +
+        `Type the event title to confirm: ${event.title}`
+    );
+    
+    if (!confirmDelete) {
+        return;
+    }
+    
+    // Additional confirmation for events with registrations
+    if (event.registrationCount && event.registrationCount > 0) {
+        const secondConfirm = confirm(
+            `⚠️ WARNING: This event has ${event.registrationCount} registered attendees!\n\n` +
+            `Are you absolutely sure you want to delete it?`
+        );
+        
+        if (!secondConfirm) {
+            return;
+        }
+    }
+    
+    try {
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            this.showNotification('Please log in again', 'error');
+            return;
+        }
 
-                        await axios.delete(`${this.apiUrl}/events/${event._id}`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                            },
-                            timeout: 15000
-                        });
-                        
-                        // Remove from local array
-                        this.userEvents = this.userEvents.filter(e => e._id !== event._id);
-                        this.updateStats();
-                        
-                        this.showNotification('Event deleted successfully!', 'success');
-                        
-                    } catch (error) {
-                        console.error('Delete event error:', error);
-                        this.showNotification('Failed to delete event', 'error');
-                    }
-                },
+        console.log('Deleting event:', event._id);
+        this.showNotification('Deleting event...', 'info');
+
+        const response = await axios.delete(`${this.apiUrl}/events/${event._id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+            timeout: 15000
+        });
+
+        console.log('Event deleted successfully:', response.data);
+        
+        // Remove from local array immediately for better UX
+        this.userEvents = this.userEvents.filter(e => e._id !== event._id);
+        
+        // Update stats
+        this.updateStats();
+        
+        this.showNotification('Event deleted successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Delete event error:', error);
+        
+        let errorMessage = 'Failed to delete event';
+        if (error.response?.status === 400) {
+            errorMessage = error.response.data?.error || 'Cannot delete event with registered attendees';
+        } else if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+        } else if (error.request) {
+            errorMessage = 'No response from server';
+        }
+        
+        this.showNotification(errorMessage, 'error');
+        
+        // Reload data in case of error to ensure consistency
+        await this.loadDashboardData();
+    }
+},
+// Image upload handling
+handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        this.showNotification('Please select a valid image file', 'error');
+        event.target.value = ''; // Clear the input
+        return;
+    }
+    
+    // Validate file size (limit to 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+        this.showNotification('Image file must be less than 5MB', 'error');
+        event.target.value = ''; // Clear the input
+        return;
+    }
+    
+    // Store the file for upload
+    this.eventForm.image = file;
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        this.eventForm.imagePreview = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    
+    console.log('Image selected:', file.name, 'Size:', Math.round(file.size / 1024) + 'KB');
+    this.showNotification('Image selected successfully!', 'success');
+},
+
+removeImage() {
+    this.eventForm.image = null;
+    this.eventForm.imagePreview = null;
+    
+    // Clear the file input
+    if (this.$refs.imageInput) {
+        this.$refs.imageInput.value = '';
+    }
+    
+    this.showNotification('Image removed', 'info');
+},
                 
                 async loadEvents() {
-                    try {
-                        const response = await axios.get(`${this.apiUrl}/events`, {
-                            params: {
-                                search: this.eventFilters.search || '',
-                                status: this.eventFilters.status || ''
-                            },
-                            timeout: 15000
-                        });
-                        
-                        this.allEvents = response.data || [];
-                        
-                    } catch (error) {
-                        console.error('Load events error:', error);
-                        this.showNotification('Failed to load events', 'error');
-                        this.allEvents = [];
+    try {
+        console.log('Loading events from:', `${this.apiUrl}/events`);
+        console.log('Event filters:', this.eventFilters);
+        
+        // Make sure API URL is correct
+        const apiUrl = this.apiUrl || 'https://cst-3990-backend-f533.onrender.com/api';
+        
+        const response = await axios.get(`${apiUrl}/events`, {
+            params: {
+                search: this.eventFilters.search || '',
+                status: this.eventFilters.status || ''
+            },
+            timeout: 15000
+        });
+        
+        console.log('Events loaded successfully:', response.data.length, 'events');
+        this.allEvents = response.data || [];
+        
+        if (this.allEvents.length === 0) {
+            this.showNotification('No events found. Create some events first!', 'info');
+        }
+        
+    } catch (error) {
+        console.error('Load events error:', error);
+        
+        let errorMessage = 'Failed to load events';
+        
+        if (error.response) {
+            console.error('Events error response:', error.response);
+            if (error.response.status === 404) {
+                errorMessage = 'Events API not found. Please check if backend routes are properly configured.';
+            } else {
+                errorMessage = error.response.data?.error || `Server error: ${error.response.status}`;
+            }
+        } else if (error.request) {
+            errorMessage = 'Could not connect to server. Please check your internet connection.';
+        }
+        
+        this.showNotification(errorMessage, 'error');
+        
+        // Set empty array so UI doesn't break
+        this.allEvents = [];
                     }
                 },
+                // Image URL construction
+getEventImageUrl(imageName) {
+    if (!imageName) return null;
+    
+    // Construct the full URL to the uploaded image
+    const baseUrl = this.apiUrl.replace('/api', ''); // Remove /api from the URL
+    const imageUrl = `${baseUrl}/uploads/${imageName}`;
+    
+    console.log('Constructing image URL:', imageUrl);
+    return imageUrl;
+},
+
+// Handle image loading errors
+handleImageError(event) {
+    console.error('Failed to load event image:', event.target.src);
+    this.showNotification('Failed to load event image', 'error');
+    
+    // Hide the image container or show a placeholder
+    event.target.style.display = 'none';
+},
+
+// Handle successful image loading
+handleImageLoad(event) {
+    console.log('Event image loaded successfully:', event.target.src);
+},
                 
                 async registerForEvent(event) {
                     try {
@@ -1042,7 +1910,9 @@
                         
                         this.eventGuests = response.data;
                         this.showGuests = true;
-                        this.qrScanInput = '';
+                        this.qrScanInput = ''; // Clear QR input when opening modal
+                        this.showManualInput = true; // Default to manual input
+                        this.stopCamera(); // Ensure camera is stopped when opening modal
                     } catch (error) {
                         this.showNotification('Failed to load guests', 'error');
                     }
@@ -1052,7 +1922,7 @@
                     try {
                         this.showNotification('Running AI clustering...', 'info');
                         
-                        await axios.post(`${this.apiUrl}/events/${event._id}/cluster`, {
+                        const response = await axios.post(`${this.apiUrl}/events/${event._id}/cluster`, {
                             algorithm: 'kmeans',
                             numClusters: 3
                         }, {
@@ -1061,14 +1931,20 @@
                             }
                         });
                         
+                        // Load cluster results
+                        const clusterResponse = await axios.get(`${this.apiUrl}/events/${event._id}/clusters`, {
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
+                            }
+                        });
+                        
+                        this.clusteringResults = clusterResponse.data;
+                        this.showClustering = true;
+                        
                         this.showNotification('Clustering completed successfully!', 'success');
                     } catch (error) {
                         this.showNotification(error.response?.data?.error || 'Clustering failed', 'error');
                     }
-                },
-                
-                async viewSessionAnalytics(event) {
-                    this.showNotification('Analytics feature coming soon!', 'info');
                 },
                 
                 async manualCheckIn(guest) {
@@ -1092,12 +1968,16 @@
                 
                 async checkIn(event) {
                     try {
+                        // Generate the same QR data structure that would be scanned
                         const qrData = {
                             eventId: event._id,
                             userId: this.currentUser.id || this.currentUser._id,
                             userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
                             userEmail: this.currentUser.email,
                             eventTitle: event.title,
+                            eventDate: event.date,
+                            eventLocation: event.location,
+                            registrationTime: new Date().toISOString(),
                             checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
                         };
                         
@@ -1116,43 +1996,20 @@
                     }
                 },
                 
-                // Copy QR Data for Demo
-                async copyQRData(event) {
-                    try {
-                        const qrData = {
-                            eventId: event._id,
-                            userId: this.currentUser.id || this.currentUser._id,
-                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
-                            userEmail: this.currentUser.email,
-                            eventTitle: event.title,
-                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
-                        };
-                        
-                        const qrDataString = JSON.stringify(qrData);
-                        await navigator.clipboard.writeText(qrDataString);
-                        this.showNotification('QR data copied to clipboard! Paste it in the organizer QR scanner.', 'success');
-                    } catch (error) {
-                        console.log('QR Data:', JSON.stringify({
-                            eventId: event._id,
-                            userId: this.currentUser.id || this.currentUser._id,
-                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
-                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
-                        }));
-                        this.showNotification('Check console for QR data to copy manually', 'info');
-                    }
-                },
-                
                 // QR Code Processing
                 async processQRScan() {
                     if (!this.qrScanInput.trim()) return;
                     
                     try {
+                        // Try to parse the QR data
                         const qrData = JSON.parse(this.qrScanInput);
                         
+                        // Validate QR data structure
                         if (!qrData.eventId || !qrData.userId || !qrData.checkInCode) {
                             throw new Error('Invalid QR code format');
                         }
                         
+                        // Process the check-in
                         await axios.post(`${this.apiUrl}/checkin`, {
                             qrData: this.qrScanInput
                         }, {
@@ -1161,6 +2018,7 @@
                             }
                         });
                         
+                        // Update the guest list
                         const guest = this.eventGuests.find(g => g.attendee._id === qrData.userId);
                         if (guest) {
                             guest.checkedIn = true;
@@ -1168,55 +2026,273 @@
                         }
                         
                         this.showNotification(`${qrData.userName} checked in successfully!`, 'success');
-                        this.qrScanInput = '';
+                        this.qrScanInput = ''; // Clear the input
                         
                     } catch (error) {
-                        this.showNotification('Invalid QR code format', 'error');
+                        if (error.message === 'Invalid QR code format') {
+                            this.showNotification('Invalid QR code format', 'error');
+                        } else {
+                            this.showNotification(error.response?.data?.error || 'QR scan failed', 'error');
+                        }
                     }
+                },
+                
+                // Camera Scanner Methods
+                async startCamera() {
+                    try {
+                        this.cameraError = null;
+                        this.scanStatus = { type: 'scanning', message: 'Starting camera...' };
+                        
+                        // Check if browser supports camera
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error('Camera not supported by this browser');
+                        }
+                        
+                        // Request camera access
+                        const stream = await navigator.mediaDevices.getUserMedia({
+                            video: { 
+                                facingMode: 'environment', // Use back camera if available
+                                width: { ideal: 640 },
+                                height: { ideal: 480 }
+                            }
+                        });
+                        
+                        this.cameraStream = stream;
+                        this.cameraActive = true;
+                        
+                        // Wait for video element to be available
+                        await this.$nextTick();
+                        
+                        const video = this.$refs.cameraVideo;
+                        if (video) {
+                            video.srcObject = stream;
+                            video.play();
+                            
+                            // Wait for video to load
+                            video.onloadedmetadata = () => {
+                                this.scanStatus = { type: 'scanning', message: 'Scanning for QR codes...' };
+                                this.startQRScanning();
+                            };
+                        }
+                        
+                    } catch (error) {
+                        console.error('Camera access error:', error);
+                        this.cameraError = this.getCameraErrorMessage(error);
+                        this.scanStatus = null;
+                        this.cameraActive = false;
+                    }
+                },
+                
+                stopCamera() {
+                    if (this.cameraStream) {
+                        this.cameraStream.getTracks().forEach(track => track.stop());
+                        this.cameraStream = null;
+                    }
+                    
+                    if (this.scanningInterval) {
+                        clearInterval(this.scanningInterval);
+                        this.scanningInterval = null;
+                    }
+                    
+                    this.cameraActive = false;
+                    this.cameraError = null;
+                    this.scanStatus = null;
+                },
+                
+                startQRScanning() {
+                    const video = this.$refs.cameraVideo;
+                    const canvas = this.$refs.cameraCanvas;
+                    
+                    if (!video || !canvas) return;
+                    
+                    const ctx = canvas.getContext('2d');
+                    
+                    this.scanningInterval = setInterval(() => {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            
+                            if (typeof jsQR !== 'undefined') {
+                                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                                
+                                if (code) {
+                                    this.processScannedQR(code.data);
+                                }
+                            }
+                        }
+                    }, 500); // Scan every 500ms
+                },
+                
+                async processScannedQR(qrData) {
+                    try {
+                        // Stop scanning temporarily to avoid multiple scans
+                        if (this.scanningInterval) {
+                            clearInterval(this.scanningInterval);
+                            this.scanningInterval = null;
+                        }
+                        
+                        this.scanStatus = { type: 'success', message: 'QR Code detected!' };
+                        
+                        // Process the QR data
+                        const parsedData = JSON.parse(qrData);
+                        
+                        if (!parsedData.eventId || !parsedData.userId) {
+                            throw new Error('Invalid QR code format');
+                        }
+                        
+                        // Call check-in API
+                        await axios.post(`${this.apiUrl}/checkin`, {
+                            qrData: qrData
+                        }, {
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
+                            }
+                        });
+                        
+                        // Update guest list
+                        const guest = this.eventGuests.find(g => g.attendee._id === parsedData.userId);
+                        if (guest) {
+                            guest.checkedIn = true;
+                            guest.checkInTime = new Date();
+                        }
+                        
+                        this.scanStatus = { type: 'success', message: `${parsedData.userName} checked in!` };
+                        this.showNotification(`${parsedData.userName} successfully checked in via camera!`, 'success');
+                        
+                        // Resume scanning after a delay
+                        setTimeout(() => {
+                            if (this.cameraActive) {
+                                this.scanStatus = { type: 'scanning', message: 'Scanning for QR codes...' };
+                                this.startQRScanning();
+                            }
+                        }, 2000);
+                        
+                    } catch (error) {
+                        console.error('QR processing error:', error);
+                        this.scanStatus = { type: 'error', message: 'Invalid QR code' };
+                        this.showNotification('Invalid QR code scanned', 'error');
+                        
+                        // Resume scanning after error
+                        setTimeout(() => {
+                            if (this.cameraActive) {
+                                this.scanStatus = { type: 'scanning', message: 'Scanning for QR codes...' };
+                                this.startQRScanning();
+                            }
+                        }, 2000);
+                    }
+                },
+                
+                getCameraErrorMessage(error) {
+                    if (error.name === 'NotAllowedError') {
+                        return 'Camera access denied. Please allow camera permissions and try again.';
+                    } else if (error.name === 'NotFoundError') {
+                        return 'No camera found on this device.';
+                    } else if (error.name === 'NotSupportedError') {
+                        return 'Camera not supported by this browser.';
+                    } else {
+                        return `Camera error: ${error.message}`;
+                    }
+                },
+                
+                toggleScannerMode() {
+                    this.showManualInput = !this.showManualInput;
+                    if (this.showManualInput && this.cameraActive) {
+                        this.stopCamera();
+                    }
+                },
+                
+                closeGuestsModal() {
+                    this.stopCamera(); // Always stop camera when closing modal
+                    this.showGuests = false;
                 },
                 
                 // Profile Methods
+                async loadProfile() {
+    try {
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            console.log('No token found for profile');
+            return;
+        }
+        
+        console.log('Loading profile data...');
+        
+        const response = await axios.get(`${this.apiUrl}/profile`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            timeout: 15000
+        });
+        
+        console.log('Profile loaded:', response.data);
+        this.profileData = response.data;
+        this.updateProfileStats();
+        this.loadRecentActivity();
+        
+    } catch (error) {
+        console.error('Load profile error:', error);
+        
+        if (error.response?.status === 401) {
+            this.showNotification('Session expired. Please log in again.', 'error');
+            this.logout();
+        } else if (error.response?.status === 404) {
+            this.showNotification('Profile API not found. Using current user data.', 'warning');
+            // Fallback to current user data
+            this.profileData = { ...this.currentUser };
+        } else {
+            this.showNotification('Failed to load profile. Using current user data.', 'warning');
+            // Fallback to current user data
+            this.profileData = { ...this.currentUser };
+        }
+    }
+},
+
                 async updateProfile(section) {
-                    this.profileLoading = true;
-                    try {
-                        const token = localStorage.getItem('eventhive_token');
-                        if (!token) {
-                            this.showNotification('Please log in again', 'error');
-                            return;
-                        }
+    this.profileLoading = true;
+    try {
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            this.showNotification('Please log in again', 'error');
+            return;
+        }
 
-                        const updateData = {
-                            firstName: this.editData.firstName,
-                            lastName: this.editData.lastName,
-                            professionalRole: this.editData.professionalRole,
-                            interests: this.editData.interests
-                        };
+        const updateData = {
+            firstName: this.editData.firstName,
+            lastName: this.editData.lastName,
+            professionalRole: this.editData.professionalRole,
+            interests: this.editData.interests
+        };
 
-                        await axios.put(`${this.apiUrl}/profile`, updateData, {
-                            headers: { 'Authorization': `Bearer ${token}` },
-                            timeout: 15000
-                        });
+        const response = await axios.put(`${this.apiUrl}/profile`, updateData, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            timeout: 15000
+        });
                         
-                        this.currentUser = { ...this.currentUser, ...updateData };
-                        localStorage.setItem('eventhive_user', JSON.stringify(this.currentUser));
+                     this.currentUser = { ...this.currentUser, ...updateData };
+        localStorage.setItem('eventhive_user', JSON.stringify(this.currentUser));
 
-                        this.editMode[section] = false;
-                        this.resetEditData();
-                        this.showNotification('Profile updated successfully!', 'success');
+        this.editMode[section] = false;
+        this.resetEditData();
+        this.showNotification('Profile updated successfully!', 'success');
 
-                    } catch (error) {
-                        console.error('Profile update error:', error);
-                        this.showNotification('Failed to update profile', 'error');
-                    } finally {
-                        this.profileLoading = false;
-                    }
-                },
+    } catch (error) {
+        console.error('Profile update error:', error);
+        this.showNotification('Failed to update profile', 'error');
+    } finally {
+        this.profileLoading = false;
+    }
+},
                 
                 toggleEdit(section) {
                     if (this.editMode[section]) {
+                        // Cancel edit
                         this.editMode[section] = false;
                         this.resetEditData();
                     } else {
+                        // Start edit
                         this.editMode[section] = true;
                         this.loadEditData();
                     }
@@ -1224,11 +2300,11 @@
                 
                 loadEditData() {
                     this.editData = {
-                        firstName: this.currentUser.firstName || '',
-                        lastName: this.currentUser.lastName || '',
-                        email: this.currentUser.email || '',
-                        professionalRole: this.currentUser.professionalRole || '',
-                        interests: [...(this.currentUser.interests || [])]
+                        firstName: this.profileData.firstName || '',
+                        lastName: this.profileData.lastName || '',
+                        email: this.profileData.email || '',
+                        professionalRole: this.profileData.professionalRole || '',
+                        interests: [...(this.profileData.interests || [])]
                     };
                 },
                 
@@ -1243,46 +2319,273 @@
                     this.newInterest = '';
                 },
                 
+                updateProfileStats() {
+    if (!this.profileData) return;
+    
+    this.profileStats = {
+        totalEvents: this.userEvents?.length || 0,
+        totalConnections: Math.floor(Math.random() * 50) + 10, // Mock data
+        memberSince: this.profileData.createdAt ? 
+            this.formatDate(this.profileData.createdAt) : 
+            this.formatDate(new Date())
+    };
+},
+                
+                loadRecentActivity() {
+                    // Mock recent activity data
+                    this.recentActivity = [
+                        {
+                            id: 1,
+                            title: 'Updated profile information',
+                            time: '2 hours ago',
+                            icon: 'fas fa-user-edit'
+                        },
+                        {
+                            id: 2,
+                            title: this.currentUser.role === 'organizer' ? 'Created new event' : 'Registered for AI Summit',
+                            time: '1 day ago',
+                            icon: this.currentUser.role === 'organizer' ? 'fas fa-plus-circle' : 'fas fa-calendar-plus'
+                        },
+                        {
+                            id: 3,
+                            title: this.currentUser.role === 'organizer' ? 'Analyzed event clusters' : 'Checked into Tech Workshop',
+                            time: '3 days ago',
+                            icon: this.currentUser.role === 'organizer' ? 'fas fa-layer-group' : 'fas fa-check-circle'
+                        }
+                    ];
+                },
+                
                 // Navigation
-                navigateTo(view) {
-                    this.currentView = view;
+               navigateTo(view) {
+    console.log('Navigating to:', view);
+    this.currentView = view;
+    
+    // Load data based on view
+    if (view === 'profile') {
+        if (!this.profileData || Object.keys(this.profileData).length === 0) {
+            // Initialize with current user data if empty
+            this.profileData = { ...this.currentUser };
+        }
+        this.loadProfile();
+    } else if (view === 'dashboard') {
+        this.loadDashboardData();
+    } else if (view === 'events') {
+        this.loadEvents();
+    }
+},
+                
+                // UI Methods
+                async viewEvent(event) {
+                    this.selectedEvent = event;
+                    this.qrCodeGenerated = false;
+                    this.showQRFallback = false;
                     
-                    if (view === 'dashboard') {
-                        this.loadDashboardData();
-                    } else if (view === 'events') {
-                        this.loadEvents();
+                    // Generate QR code for attendees who are registered
+                    if (this.currentUser.role === 'attendee' && this.isRegistered(event)) {
+                        // Try to load QR code from backend first
+                        await this.loadQRCodeFromBackend(event);
                     }
                 },
                 
-                // UI Methods
-                viewEvent(event) {
-                    this.selectedEvent = event;
+                async loadQRCodeFromBackend(event) {
+                    try {
+                        // Try to get the QR code from backend
+                        const response = await axios.get(`${this.apiUrl}/events/${event._id}/my-registration`, {
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
+                            }
+                        });
+                        
+                        if (response.data.qrCode) {
+                            // Backend has QR code - display it
+                            this.displayBackendQR(response.data.qrCode);
+                            this.selectedEvent.qrCode = response.data.qrCode;
+                            this.qrCodeGenerated = true;
+                            console.log('Using QR code from backend');
+                        } else {
+                            // No QR code in backend - generate client-side
+                            setTimeout(() => {
+                                this.generateQRCode(event);
+                            }, 300);
+                        }
+                    } catch (error) {
+                        console.log('Could not load QR from backend, generating client-side');
+                        // Fallback to client-side generation
+                        setTimeout(() => {
+                            this.generateQRCode(event);
+                        }, 300);
+                    }
+                },
+                
+                displayBackendQR(qrCodeDataUrl) {
+                    // Display the QR code from backend (base64 data URL)
+                    const qrContainer = document.querySelector('.qr-container');
+                    if (qrContainer) {
+                        qrContainer.innerHTML = `
+                            <img src="${qrCodeDataUrl}" 
+                                 alt="QR Code" 
+                                 style="width: 200px; height: 200px; border-radius: 10px; background: white; padding: 10px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
+                        `;
+                        this.showNotification('QR code loaded from server!', 'success');
+                    }
+                },
+                
+                getCleanCanvasId(eventId) {
+                    // Clean the event ID to make it a valid DOM ID
+                    return 'qr-canvas-' + eventId.replace(/[^a-zA-Z0-9]/g, '');
+                },
+                
+                async generateQRCode(event) {
+                    try {
+                        this.qrCodeGenerated = false;
+                        this.showQRFallback = false;
+                        
+                        // Create QR data
+                        const qrData = {
+                            eventId: event._id,
+                            userId: this.currentUser.id || this.currentUser._id,
+                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
+                            userEmail: this.currentUser.email,
+                            eventTitle: event.title,
+                            eventDate: event.date,
+                            eventLocation: event.location,
+                            registrationTime: new Date().toISOString(),
+                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
+                        };
+                        
+                        const qrDataString = JSON.stringify(qrData);
+                        console.log('QR Data to encode:', qrDataString);
+                        
+                        // Try to find canvas
+                        const canvasId = this.getCleanCanvasId(event._id);
+                        const canvas = document.getElementById(canvasId);
+                        
+                        console.log('Looking for canvas with ID:', canvasId);
+                        console.log('Canvas found:', !!canvas);
+                        console.log('QRCode library available:', typeof QRCode !== 'undefined');
+                        
+                        if (canvas && typeof QRCode !== 'undefined') {
+                            // Clear canvas
+                            const ctx = canvas.getContext('2d');
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            
+                            // Generate QR code
+                            await QRCode.toCanvas(canvas, qrDataString, {
+                                width: 200,
+                                margin: 2,
+                                color: {
+                                    dark: '#000000',
+                                    light: '#FFFFFF'
+                                }
+                            });
+                            
+                            this.qrCodeGenerated = true;
+                            this.showNotification('QR code generated successfully!', 'success');
+                            console.log('QR code generated successfully on canvas');
+                            
+                        } else {
+                            console.log('Canvas not found or QRCode library not available, using fallback');
+                            this.useFallbackQR(event);
+                        }
+                        
+                    } catch (error) {
+                        console.error('QR generation error:', error);
+                        this.showNotification('QR generation failed, using fallback', 'error');
+                        this.useFallbackQR(event);
+                    }
+                },
+                
+                useFallbackQR(event) {
+                    try {
+                        // Create QR data
+                        const qrData = {
+                            eventId: event._id,
+                            userId: this.currentUser.id || this.currentUser._id,
+                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
+                            userEmail: this.currentUser.email,
+                            eventTitle: event.title,
+                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
+                        };
+                        
+                        const qrDataString = JSON.stringify(qrData);
+                        
+                        // Use QR Server API (free online QR generator)
+                        const encodedData = encodeURIComponent(qrDataString);
+                        this.fallbackQRUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedData}`;
+                        
+                        this.showQRFallback = true;
+                        this.qrCodeGenerated = true;
+                        
+                        console.log('Fallback QR URL generated:', this.fallbackQRUrl);
+                        this.showNotification('QR code generated using fallback method!', 'success');
+                        
+                    } catch (error) {
+                        console.error('Fallback QR generation failed:', error);
+                        this.showNotification('All QR generation methods failed', 'error');
+                    }
+                },
+                
+                debugQRSystem() {
+                    console.log('=== QR SYSTEM DEBUG ===');
+                    console.log('Selected Event:', this.selectedEvent);
+                    console.log('Current User:', this.currentUser);
+                    console.log('QRCode Library Available:', typeof QRCode !== 'undefined');
+                    
+                    if (this.selectedEvent) {
+                        const canvasId = this.getCleanCanvasId(this.selectedEvent._id);
+                        const canvas = document.getElementById(canvasId);
+                        console.log('Canvas ID:', canvasId);
+                        console.log('Canvas Element:', canvas);
+                        
+                        if (canvas) {
+                            console.log('Canvas Properties:', {
+                                width: canvas.width,
+                                height: canvas.height,
+                                style: canvas.style.cssText
+                            });
+                        }
+                        
+                        // Test if we can create a simple canvas drawing
+                        if (canvas) {
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = '#FF0000';
+                            ctx.fillRect(50, 50, 100, 100);
+                            console.log('Drew red rectangle on canvas for testing');
+                        }
+                    }
+                    
+                    console.log('DOM QR containers:', document.querySelectorAll('.qr-container'));
+                    console.log('All canvases:', document.querySelectorAll('canvas'));
+                    
+                    // Try direct QRCode test
+                    if (typeof QRCode !== 'undefined') {
+                        console.log('QRCode object methods:', Object.getOwnPropertyNames(QRCode));
+                    }
+                    
+                    this.showNotification('Debug info logged to console', 'info');
                 },
                 
                 addInterest() {
                     const interest = this.currentView === 'profile' ? this.newInterest : this.interestInput;
+                    const targetArray = this.currentView === 'profile' ? this.editData.interests : this.authForm.interests;
                     
-                    if (this.currentView === 'profile' && this.newInterest && this.newInterest.trim() && !this.editData.interests.includes(this.newInterest.trim())) {
-                        this.editData.interests.push(this.newInterest.trim());
-                        this.newInterest = '';
-                    } else if (this.currentView !== 'profile' && this.interestInput && this.interestInput.trim() && !this.authForm.interests.includes(this.interestInput.trim())) {
-                        this.authForm.interests.push(this.interestInput.trim());
-                        this.interestInput = '';
-                    }
-                },
+                    if (this.newInterest && this.newInterest.trim() && !this.editData.interests.includes(this.newInterest.trim())) {
+        this.editData.interests.push(this.newInterest.trim());
+        this.newInterest = '';
+                        }
+                    },
                 
                 removeInterest(interest) {
                     if (this.currentView === 'profile') {
-                        this.editData.interests = this.editData.interests.filter(i => i !== interest);
-                    } else {
-                        this.authForm.interests = this.authForm.interests.filter(i => i !== interest);
-                    }
-                },
+                         this.editData.interests = this.editData.interests.filter(i => i !== interest);
+                }},
                 
                 isRegistered(event) {
-                    if (this.currentUser.role !== 'attendee') {
-                        return false;
+                    // Only attendees can be "registered" for events
+                    if (this.currentUser.role !== 'attendee') {return false;
                     }
+                    
+                    // Check if this attendee is registered for the event
                     return this.userEvents.some(userEvent => userEvent._id === event._id);
                 },
                 
@@ -1301,21 +2604,23 @@
                 },
                 
                 resetEventForm() {
-                    this.eventForm = {
-                        title: '',
-                        description: '',
-                        date: '',
-                        time: '',
-                        location: '',
-                        maxAttendees: 100,
-                        sessions: [],
-                        image: null,
-                        imagePreview: null
-                    };
-                    
-                    this.isEditMode = false;
-                    this.editingEventId = null;
-                },
+    this.eventForm = {
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        location: '',
+        maxAttendees: 100,
+        sessions: [],
+        image: null,        // Add this
+        imagePreview: null  // Add this
+    };
+    
+    // Clear the file input if it exists
+    if (this.$refs.imageInput) {
+        this.$refs.imageInput.value = '';
+    }
+},
                 
                 // Session Management
                 addSession() {
@@ -1324,7 +2629,8 @@
                         speaker: '',
                         startTime: '',
                         endTime: '',
-                        description: ''
+                        description: '',
+                        conflict: null
                     });
                 },
                 
@@ -1335,55 +2641,273 @@
                             speaker: 'Dr. Sarah Johnson',
                             startTime: '09:00',
                             endTime: '10:00',
-                            description: 'Welcome and introduction to the latest industry trends'
+                            description: 'Welcome and introduction to the latest industry trends',
+                            conflict: null
                         },
                         {
                             title: 'AI in Modern Business',
                             speaker: 'Prof. Michael Chen',
                             startTime: '10:30',
                             endTime: '11:30',
-                            description: 'Exploring artificial intelligence applications in various industries'
+                            description: 'Exploring artificial intelligence applications in various industries',
+                            conflict: null
+                        },
+                        {
+                            title: 'Networking Break',
+                            speaker: '',
+                            startTime: '11:30',
+                            endTime: '12:00',
+                            description: 'Coffee and networking session',
+                            conflict: null
+                        },
+                        {
+                            title: 'Future of Technology',
+                            speaker: 'Dr. Emma Rodriguez',
+                            startTime: '14:00',
+                            endTime: '15:00',
+                            description: 'Panel discussion on emerging technologies and their impact',
+                            conflict: null
                         }
                     ];
                     
                     this.eventForm.sessions.push(...sampleSessions);
-                    this.showNotification('Sample sessions added!', 'success');
+                    this.showNotification('Sample sessions added! Try the scheduling tools.', 'success');
+                },
+                
+                // Session Analytics
+                async viewSessionAnalytics(event) {
+                    try {
+                        // In a real app, this would fetch actual analytics data
+                        // For demo purposes, we'll generate mock data
+                        const mockAnalytics = this.generateMockAnalytics(event);
+                        
+                        this.analyticsData = mockAnalytics;
+                        this.showAnalytics = true;
+                        
+                        this.showNotification('Analytics loaded successfully!', 'success');
+                    } catch (error) {
+                        this.showNotification('Failed to load analytics', 'error');
+                    }
+                },
+                async loadDashboardData() {
+    try {
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            console.log('No token found for dashboard data');
+            return;
+        }
+        
+        console.log('Loading dashboard data...');
+        const apiUrl = this.apiUrl || 'https://cst-3990-backend-f533.onrender.com/api';
+        
+        // Load user's events (created or registered)
+        try {
+            const response = await axios.get(`${apiUrl}/my-events`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                timeout: 15000
+            });
+            
+            console.log('User events loaded:', response.data.length, 'events');
+            this.userEvents = response.data || [];
+            this.updateStats();
+        } catch (myEventsError) {
+            console.error('My events error:', myEventsError);
+            this.userEvents = [];
+            
+            if (myEventsError.response?.status === 404) {
+                this.showNotification('My events API not configured. Some features may not work.', 'warning');
+            }
+        }
+        
+        // For attendees, also load all available events
+        if (this.currentUser && this.currentUser.role === 'attendee') {
+            console.log('Loading all events for attendee...');
+            await this.loadEvents();
+        }
+        
+    } catch (error) {
+        console.error('Load dashboard data error:', error);
+        this.showNotification('Failed to load some dashboard data', 'warning');
+        
+        // Initialize empty arrays to prevent UI errors
+        this.userEvents = [];
+        this.allEvents = [];
+    }
+},
+                
+                generateMockAnalytics(event) {
+                    const sessions = event.sessions || [];
+                    const totalSessions = sessions.length;
+                    
+                    // Generate mock session data
+                    const sessionAnalytics = sessions.map(session => ({
+                        title: session.title,
+                        startTime: session.startTime,
+                        endTime: session.endTime,
+                        duration: this.calculateDuration(session.startTime, session.endTime),
+                        attendance: Math.floor(Math.random() * 80) + 20, // 20-100 attendees
+                        engagementRate: Math.floor(Math.random() * 30) + 70 // 70-100% engagement
+                    }));
+                    
+                    // Calculate averages
+                    const avgDuration = sessionAnalytics.reduce((sum, s) => sum + s.duration, 0) / sessionAnalytics.length || 0;
+                    const avgAttendance = sessionAnalytics.reduce((sum, s) => sum + s.attendance, 0) / sessionAnalytics.length || 0;
+                    
+                    // Find most popular session
+                    const popularSession = sessionAnalytics.reduce((prev, current) => 
+                        (prev.attendance > current.attendance) ? prev : current
+                    );
+                    
+                    return {
+                        totalSessions,
+                        avgDuration: Math.round(avgDuration) + ' min',
+                        avgAttendance: Math.round(avgAttendance) + ' people',
+                        popularSession: popularSession?.title || 'N/A',
+                        sessions: sessionAnalytics,
+                        suggestions: [
+                            {
+                                id: 1,
+                                text: 'Consider moving popular sessions to larger venues'
+                            },
+                            {
+                                id: 2,
+                                text: 'Add 15-minute breaks between sessions for better flow'
+                            },
+                            {
+                                id: 3,
+                                text: 'Schedule high-energy sessions during peak hours (10-11 AM, 2-3 PM)'
+                            },
+                            {
+                                id: 4,
+                                text: 'Group similar topics together to reduce attendee movement'
+                            }
+                        ]
+                    };
+                },
+                
+                calculateDuration(startTime, endTime) {
+                    if (!startTime || !endTime) return 0;
+                    
+                    const start = new Date(`1970-01-01T${startTime}`);
+                    const end = new Date(`1970-01-01T${endTime}`);
+                    
+                    return Math.round((end - start) / 60000); // Convert to minutes
                 },
                 
                 removeSession(index) {
                     this.eventForm.sessions.splice(index, 1);
+                    this.validateSessionTimes();
                 },
                 
-                closeGuestsModal() {
-                    this.showGuests = false;
-                },
-                
-                async loadDashboardData() {
-                    try {
-                        const token = localStorage.getItem('eventhive_token');
-                        if (!token) {
-                            return;
+                // Automatic Scheduling & Conflict Detection
+                validateSessionTimes() {
+                    // Clear previous conflicts
+                    this.eventForm.sessions.forEach(session => {
+                        session.conflict = null;
+                    });
+                    
+                    // Check for time conflicts
+                    for (let i = 0; i < this.eventForm.sessions.length; i++) {
+                        for (let j = i + 1; j < this.eventForm.sessions.length; j++) {
+                            const session1 = this.eventForm.sessions[i];
+                            const session2 = this.eventForm.sessions[j];
+                            
+                            if (session1.startTime && session1.endTime && session2.startTime && session2.endTime) {
+                                const conflict = this.checkTimeConflict(session1, session2);
+                                if (conflict) {
+                                    session1.conflict = `Conflicts with "${session2.title || 'Session ' + (j + 1)}"`;
+                                    session2.conflict = `Conflicts with "${session1.title || 'Session ' + (i + 1)}"`;
+                                }
+                            }
                         }
-                        
-                        const response = await axios.get(`${this.apiUrl}/my-events`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            },
-                            timeout: 15000
-                        });
-                        
-                        this.userEvents = response.data || [];
-                        this.updateStats();
-                        
-                        if (this.currentUser && this.currentUser.role === 'attendee') {
-                            await this.loadEvents();
-                        }
-                        
-                    } catch (error) {
-                        console.error('Load dashboard data error:', error);
-                        this.userEvents = [];
-                        this.allEvents = [];
                     }
+                },
+                
+                checkTimeConflict(session1, session2) {
+                    const start1 = new Date(`1970-01-01T${session1.startTime}`);
+                    const end1 = new Date(`1970-01-01T${session1.endTime}`);
+                    const start2 = new Date(`1970-01-01T${session2.startTime}`);
+                    const end2 = new Date(`1970-01-01T${session2.endTime}`);
+                    
+                    // Check if sessions overlap
+                    return (start1 < end2 && start2 < end1);
+                },
+                
+                autoScheduleSessions() {
+                    if (this.eventForm.sessions.length === 0) {
+                        this.showNotification('Add some sessions first!', 'info');
+                        return;
+                    }
+                    
+                    // Get event start time or default to 9:00 AM
+                    const eventStartTime = this.eventForm.time || '09:00';
+                    let currentTime = new Date(`1970-01-01T${eventStartTime}`);
+                    
+                    // Auto-schedule sessions with 30-minute gaps
+                    this.eventForm.sessions.forEach((session, index) => {
+                        const sessionDuration = 60; // 1 hour default
+                        const breakDuration = 30; // 30 minutes break
+                        
+                        // Set start time
+                        session.startTime = currentTime.toTimeString().slice(0, 5);
+                        
+                        // Set end time
+                        const endTime = new Date(currentTime.getTime() + sessionDuration * 60000);
+                        session.endTime = endTime.toTimeString().slice(0, 5);
+                        
+                        // Move to next session time (with break)
+                        currentTime = new Date(endTime.getTime() + breakDuration * 60000);
+                        
+                        // Clear conflicts since we're auto-scheduling
+                        session.conflict = null;
+                    });
+                    
+                    this.showNotification('Sessions automatically scheduled!', 'success');
+                },
+                
+                optimizeSchedule() {
+                    if (this.eventForm.sessions.length === 0) {
+                        this.showNotification('Add some sessions first!', 'info');
+                        return;
+                    }
+                    
+                    // Sort sessions by importance/priority (longer sessions first)
+                    const sortedSessions = [...this.eventForm.sessions].sort((a, b) => {
+                        // If both have speakers, prioritize those
+                        if (a.speaker && !b.speaker) return -1;
+                        if (!a.speaker && b.speaker) return 1;
+                        
+                        // Otherwise sort by title length (longer titles = more important)
+                        return b.title.length - a.title.length;
+                    });
+                    
+                    // Optimal time slots (avoiding lunch and late hours)
+                    const optimalSlots = [
+                        { start: '09:00', end: '10:00', priority: 1 },
+                        { start: '10:30', end: '11:30', priority: 1 },
+                        { start: '14:00', end: '15:00', priority: 1 },
+                        { start: '15:30', end: '16:30', priority: 1 },
+                        { start: '11:30', end: '12:30', priority: 2 },
+                        { start: '16:30', end: '17:30', priority: 2 },
+                        { start: '13:00', end: '14:00', priority: 3 } // Lunch time - less optimal
+                    ];
+                    
+                    // Assign optimal slots to sessions
+                    sortedSessions.forEach((session, index) => {
+                        if (index < optimalSlots.length) {
+                            const slot = optimalSlots[index];
+                            session.startTime = slot.start;
+                            session.endTime = slot.end;
+                            session.conflict = null;
+                        }
+                    });
+                    
+                    // Update the original array
+                    this.eventForm.sessions = sortedSessions;
+                    
+                    this.showNotification('Schedule optimized for maximum attendance!', 'success');
                 },
                 
                 updateStats() {
@@ -1409,6 +2933,10 @@
                     });
                 },
                 
+                formatClusterName(name) {
+                    return name.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                },
+                
                 showNotification(message, type = 'info') {
                     this.notification = { message, type };
                     setTimeout(() => {
@@ -1416,10 +2944,14 @@
                     }, 3000);
                 },
                 
+                // Real-time functionality
                 initializeSocket() {
-                    // Socket functionality disabled for demo
-                    this.socket = null;
-                }
+    console.log('Socket.IO disabled - no more localhost:5000 errors');
+    this.socket = null;
+    return;
+                        
+                    }
+                
             }
         }).mount('#app');
     </script>
