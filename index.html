@@ -2551,6 +2551,10 @@ handleImageLoad(event) {
                         this.socket.on('session_join', (data) => {
                             this.showNotification(`Someone joined a session!`, 'info');
                         });
+                         console.log('Socket.IO disabled to stop console spam');
+    this.socket = null;
+    return;
+                        
                     }
                 }
             }
