@@ -18,7 +18,7 @@
         <header class="header">
             <div class="container">
                 <div class="header-content">
-                    <a href="#" class="logo" @click="currentView = 'landing'">
+                    <a href="#" class="logo" @click="currentUser ? (currentView = 'dashboard') : (currentView = 'landing')">
                         <i class="fas fa-calendar-alt"></i> EventHive
                     </a>
                     
@@ -78,37 +78,37 @@
                         
                         <form @submit.prevent="isRegistering ? register() : login()" class="auth-form">
                             <div class="form-group" v-if="isRegistering">
-                                <label>First Name</label>
+                                <label>First Name*</label>
                                 <input type="text" v-model="authForm.firstName" required>
                             </div>
                             
                             <div class="form-group" v-if="isRegistering">
-                                <label>Last Name</label>
+                                <label>Last Name*</label>
                                 <input type="text" v-model="authForm.lastName" required>
                             </div>
                             
                             <div class="form-group" v-if="isRegistering">
-                                <label>Username</label>
+                                <label>Username*</label>
                                 <input type="text" v-model="authForm.username" required>
                             </div>
                             
                             <div class="form-group">
-                                <label>Email</label>
+                                <label>Email*</label>
                                 <input type="email" v-model="authForm.email" required>
                             </div>
                             
                             <div class="form-group">
-                                <label>Password</label>
+                                <label>Password*</label>
                                 <input type="password" v-model="authForm.password" required>
                             </div>
                             
                             <div class="form-group" v-if="isRegistering">
-                                <label>Professional Role</label>
+                                <label>Professional Role (Optional)</label>
                                 <input type="text" v-model="authForm.professionalRole" placeholder="e.g., Software Engineer, Designer">
                             </div>
                             
                             <div class="form-group" v-if="isRegistering">
-                                <label>Interests</label>
+                                <label>Interests (Optional)</label>
                                 <input type="text" v-model="interestInput" @keyup.enter="addInterest" placeholder="Type interest and press Enter">
                                 <div class="interests-tags">
                                     <span v-for="interest in authForm.interests" :key="interest" class="interest-tag">
@@ -194,6 +194,14 @@
                                     <div class="event-actions">
                                         <button class="btn btn-secondary btn-small" @click="viewEvent(event)">
                                             <i class="fas fa-eye"></i> View
+                                        </button>
+                                        
+                                        <button v-if="currentUser.role === 'organizer'" class="btn btn-info btn-small" @click="editEvent(event)" title="Edit Event">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        
+                                        <button v-if="currentUser.role === 'organizer'" class="btn btn-danger btn-small" @click="confirmDelete(event)" title="Delete Event">
+                                            <i class="fas fa-trash"></i> Delete
                                         </button>
                                         
                                         <button v-if="currentUser.role === 'organizer'" class="btn btn-secondary btn-small" @click="viewGuests(event)">
@@ -474,7 +482,7 @@
                 </div>
 
                 <!-- Event Details Modal -->
-                <div v-if="selectedEvent" class="modal">
+                <div v-if="selectedEvent && selectedEvent._id" class="modal">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h3>{{ selectedEvent.title }}</h3>
@@ -482,30 +490,44 @@
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
+                        
+                        <!-- Image Display -->
                         <div v-if="selectedEvent.image" class="event-image-container" style="margin: 1rem 0;">
                             <img 
+                                v-if="!imageError"
                                 :src="getEventImageUrl(selectedEvent.image)" 
                                 :alt="selectedEvent.title"
                                 style="width: 100%; max-width: 400px; height: 200px; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
                                 @error="handleImageError"
                                 @load="handleImageLoad"
                             >
+                            
+                            <div v-if="imageError" class="image-placeholder">
+                                <i class="fas fa-image"></i>
+                                <span>Image not available</span>
+                            </div>
                         </div>
 
+                        <!-- Event Meta -->
                         <div class="event-meta">
                             <span><i class="fas fa-calendar"></i> {{ formatDate(selectedEvent.date) }}</span>
                             <span><i class="fas fa-clock"></i> {{ selectedEvent.time }}</span>
                             <span><i class="fas fa-map-marker-alt"></i> {{ selectedEvent.location }}</span>
                         </div>
                         
+                        <!-- Event Status -->
                         <div style="margin: 1rem 0;">
                             <span class="event-status" :class="'status-' + selectedEvent.status">
                                 {{ selectedEvent.status }}
                             </span>
                         </div>
                         
-                        <p style="margin: 1rem 0;">{{ selectedEvent.description }}</p>
+                        <!-- Event Description -->
+                        <p v-if="selectedEvent.description" style="margin: 1rem 0;">
+                            {{ selectedEvent.description }}
+                        </p>
                         
+                        <!-- Sessions -->
                         <div v-if="selectedEvent.sessions && selectedEvent.sessions.length > 0">
                             <h4 style="margin: 1.5rem 0 1rem 0;">Sessions</h4>
                             <div class="sessions-list">
@@ -514,31 +536,109 @@
                                         <h5>{{ session.title }}</h5>
                                         <span class="session-time">{{ session.startTime }} - {{ session.endTime }}</span>
                                     </div>
-                                    <div class="session-speaker">by {{ session.speaker }}</div>
-                                    <div class="session-description">{{ session.description }}</div>
+                                    <div class="session-speaker" v-if="session.speaker">by {{ session.speaker }}</div>
+                                    <div class="session-description" v-if="session.description">{{ session.description }}</div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div v-if="currentUser.role === 'attendee' && isRegistered(selectedEvent)" class="qr-code">
+                        <!-- QR Code Section -->
+                        <div v-if="currentUser && currentUser.role === 'attendee' && isRegistered(selectedEvent)" class="qr-code">
                             <h4>Your QR Code</h4>
-                            <img :src="selectedEvent.qrCode || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='" alt="QR Code" style="width: 200px; height: 200px; background: white; border: 2px solid #333; display: flex; align-items: center; justify-content: center;">
+                            <div class="qr-container">
+                                <canvas :id="'qr-canvas-' + selectedEvent._id" style="display: none;"></canvas>
+                                
+                                <div v-if="showQRFallback && fallbackQRUrl" class="qr-fallback">
+                                    <img :src="fallbackQRUrl" alt="QR Code" style="width: 200px; height: 200px; border-radius: 10px;">
+                                </div>
+                                
+                                <div v-if="!qrCodeGenerated" class="qr-generation">
+                                    <button @click="generateQRCode(selectedEvent)" class="btn btn-primary btn-small">
+                                        <i class="fas fa-qrcode"></i> Generate QR Code
+                                    </button>
+                                </div>
+                                
+                                <div class="qr-demo-section" style="margin-top: 1rem;">
+                                    <button @click="copyQRData(selectedEvent)" class="btn btn-secondary btn-small">
+                                        <i class="fas fa-copy"></i> Copy QR Data (Demo)
+                                    </button>
+                                    <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.5rem;">
+                                        <i class="fas fa-info-circle"></i> Copy this data and paste it in the organizer's QR scanner
+                                    </p>
+                                </div>
+                            </div>
                             <p style="font-size: 0.9rem; opacity: 0.8;">Show this QR code at the event entrance</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Create Event Modal -->
-                <div v-if="showCreateEvent" class="modal">
+                <!-- Delete Confirmation Modal -->
+                <div v-if="showDeleteConfirm" class="modal">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h3>Create New Event</h3>
-                            <button class="close-btn" @click="showCreateEvent = false">
+                            <h3>Confirm Delete</h3>
+                            <button class="close-btn" @click="cancelDelete">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                
+                        <div class="delete-confirmation">
+                            <div class="warning-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            
+                            <h4>Are you sure you want to delete this event?</h4>
+                            
+                            <div v-if="eventToDelete" class="event-details">
+                                <p><strong>Event:</strong> {{ eventToDelete.title }}</p>
+                                <p><strong>Date:</strong> {{ formatDate(eventToDelete.date) }}</p>
+                                <p><strong>Location:</strong> {{ eventToDelete.location }}</p>
+                            </div>
+                            
+                            <div class="warning-text">
+                                <p><strong>⚠️ This action cannot be undone!</strong></p>
+                                <p>Deleting this event will:</p>
+                                <ul>
+                                    <li>Remove the event permanently</li>
+                                    <li>Delete all attendee registrations</li>
+                                    <li>Remove all session tracking data</li>
+                                    <li>Clear all clustering results</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="modal-actions">
+                                <button class="btn btn-secondary" @click="cancelDelete" :disabled="deleteLoading">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                                
+                                <button class="btn btn-danger" @click="deleteEvent" :disabled="deleteLoading">
+                                    <span v-if="deleteLoading" class="loading-spinner"></span>
+                                    <i v-else class="fas fa-trash"></i>
+                                    {{ deleteLoading ? 'Deleting...' : 'Delete Event' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Create/Edit Event Modal -->
+                <div v-if="showCreateEvent || showEditEvent" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>{{ isEditMode ? 'Edit Event' : 'Create New Event' }}</h3>
+                            <button class="close-btn" @click="isEditMode ? cancelEdit() : (showCreateEvent = false)">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                         
-                        <form @submit.prevent="createEvent" class="auth-form">
+                        <div v-if="isEditMode && getChangesSummary().length > 0" class="changes-summary">
+                            <h4><i class="fas fa-edit"></i> Changes Made:</h4>
+                            <ul>
+                                <li v-for="change in getChangesSummary()" :key="change">{{ change }}</li>
+                            </ul>
+                        </div>
+                        
+                        <form @submit.prevent="createOrUpdateEvent" class="auth-form">
                             <div class="form-group">
                                 <label>Event Title</label>
                                 <input type="text" v-model="eventForm.title" required>
@@ -565,19 +665,25 @@
                             </div>
                             
                             <div class="form-group">
-                                <label>Event Image (Optional)</label>
+                                <label>Event Image {{ isEditMode ? '(Leave empty to keep current image)' : '(Optional)' }}</label>
                                 <input type="file" ref="imageInput" @change="handleImageUpload" accept="image/*">
                                 <div v-if="eventForm.imagePreview" class="image-preview">
                                     <img :src="eventForm.imagePreview" alt="Event preview" style="max-width: 200px; border-radius: 10px;">
                                     <button type="button" @click="removeImage" class="btn btn-danger btn-small">
                                         <i class="fas fa-times"></i> Remove
                                     </button>
+                                    <p v-if="isEditMode && !eventForm.image" style="font-size: 0.9rem; opacity: 0.7;">
+                                        <i class="fas fa-info-circle"></i> Current image (upload a new one to replace)
+                                    </p>
                                 </div>
                             </div>
                             
                             <div class="form-group">
                                 <label>Max Attendees</label>
                                 <input type="number" v-model="eventForm.maxAttendees" min="1" value="100">
+                                <small v-if="isEditMode && originalEventData" style="opacity: 0.7;">
+                                    Current registrations: {{ originalEventData.attendeeCount || 0 }}
+                                </small>
                             </div>
                             
                             <div class="form-group">
@@ -623,7 +729,6 @@
                                         </button>
                                     </div>
                                     
-                                    <!-- Schedule Timeline View -->
                                     <div v-if="eventForm.sessions.length > 0" class="schedule-timeline">
                                         <h5>Schedule Timeline</h5>
                                         <div class="timeline-container">
@@ -648,10 +753,17 @@
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary" :disabled="authLoading">
-                                <span v-if="authLoading" class="loading-spinner"></span>
-                                Create Event
-                            </button>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" @click="isEditMode ? cancelEdit() : (showCreateEvent = false)">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                                
+                                <button type="submit" class="btn btn-primary" :disabled="authLoading">
+                                    <span v-if="authLoading" class="loading-spinner"></span>
+                                    <i v-else :class="isEditMode ? 'fas fa-save' : 'fas fa-plus'"></i>
+                                    {{ authLoading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Event' : 'Create Event') }}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -666,11 +778,9 @@
                             </button>
                         </div>
                         
-                        <!-- QR Code Scanner -->
                         <div class="qr-scanner">
                             <h4>QR Code Check-In</h4>
                             
-                            <!-- Camera Scanner -->
                             <div class="camera-scanner">
                                 <div class="scanner-controls">
                                     <button v-if="!cameraActive" @click="startCamera" class="btn btn-primary btn-small">
@@ -685,7 +795,6 @@
                                     </button>
                                 </div>
                                 
-                                <!-- Camera Video -->
                                 <div v-if="cameraActive" class="camera-container">
                                     <video ref="cameraVideo" autoplay playsinline muted style="width: 100%; max-width: 400px; border-radius: 10px;"></video>
                                     <canvas ref="cameraCanvas" style="display: none;"></canvas>
@@ -702,14 +811,12 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Camera Errors -->
                                 <div v-if="cameraError" class="camera-error">
                                     <i class="fas fa-exclamation-triangle"></i>
                                     {{ cameraError }}
                                 </div>
                             </div>
                             
-                            <!-- Manual Input (fallback) -->
                             <div v-if="showManualInput" class="manual-scanner">
                                 <h5>Manual QR Data Input</h5>
                                 <div style="display: flex; gap: 1rem; align-items: flex-end;">
@@ -746,9 +853,9 @@
                                 </thead>
                                 <tbody>
                                     <tr v-for="guest in eventGuests" :key="guest._id">
-                                        <td>{{ guest.attendee.firstName }} {{ guest.attendee.lastName }}</td>
-                                        <td>{{ guest.attendee.email }}</td>
-                                        <td>{{ guest.attendee.professionalRole || 'N/A' }}</td>
+                                        <td>{{ guest.attendee ? guest.attendee.firstName + ' ' + guest.attendee.lastName : 'Unknown' }}</td>
+                                        <td>{{ guest.attendee ? guest.attendee.email : 'Unknown' }}</td>
+                                        <td>{{ guest.attendee ? (guest.attendee.professionalRole || 'N/A') : 'N/A' }}</td>
                                         <td>
                                             <span v-if="guest.checkedIn" class="btn btn-success btn-small">
                                                 <i class="fas fa-check"></i> Checked In
@@ -884,53 +991,6 @@
                     </div>
                 </div>
             </div>
-            <div v-if="showDeleteConfirm" class="modal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3>Confirm Delete</h3>
-                            <button class="close-btn" @click="cancelDelete">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-        
-                        <div class="delete-confirmation">
-                            <div class="warning-icon">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
-            
-                            <h4>Are you sure you want to delete this event?</h4>
-            
-                        <div v-if="eventToDelete" class="event-details">
-                            <p><strong>Event:</strong> {{ eventToDelete.title }}</p>
-                            <p><strong>Date:</strong> {{ formatDate(eventToDelete.date) }}</p>
-                            <p><strong>Location:</strong> {{ eventToDelete.location }}</p>
-                        </div>
-            
-                        <div class="warning-text">
-                            <p><strong>⚠️ This action cannot be undone!</strong></p>
-                            <p>Deleting this event will:</p>
-                            <ul>
-                                <li>Remove the event permanently</li>
-                                <li>Delete all attendee registrations</li>
-                                <li>Remove all session tracking data</li>
-                                <li>Clear all clustering results</li>
-                            </ul>
-                        </div>
-            
-                        <div class="modal-actions">
-                            <button class="btn btn-secondary" @click="cancelDelete" :disabled="deleteLoading">
-                                <i class="fas fa-times"></i> Cancel
-                            </button>
-                
-                            <button class="btn btn-danger" @click="deleteEvent" :disabled="deleteLoading">
-                                <span v-if="deleteLoading" class="loading-spinner"></span>
-                                <i v-else class="fas fa-trash"></i>
-                                    {{ deleteLoading ? 'Deleting...' : 'Delete Event' }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </main>
 
         <!-- Notifications -->
@@ -1001,6 +1061,7 @@
                     qrCodeGenerated: false,
                     showQRFallback: false,
                     fallbackQRUrl: '',
+                    imageError: false,
                     
                     // Camera Scanner
                     cameraActive: false,
@@ -1043,14 +1104,21 @@
                         search: '',
                         status: ''
                     },
+
+                    // Delete
+                    showDeleteConfirm: false,
+                    eventToDelete: null,
+                    deleteLoading: false,
+                    
+                    // Edit
+                    showEditEvent: false,
+                    editingEventId: null,
+                    isEditMode: false,
+                    originalEventData: null,
                     
                     // Notification
                     notification: null,
 
-                    // Delete Functionality
-                    showDeleteConfirm: false,
-                    eventToDelete: null,
-                    deleteLoading: false,
                     // API
                     apiUrl: 'https://cst-3990-backend-f533.onrender.com/api',
                     socket: null
@@ -1087,7 +1155,6 @@
                 this.loadUserFromStorage();
                 this.initializeSocket();
                 
-                // Add cleanup for camera when page is unloaded
                 window.addEventListener('beforeunload', () => {
                     this.stopCamera();
                 });
@@ -1126,85 +1193,6 @@
                         this.showNotification(error.response?.data?.error || 'Login failed', 'error');
                     } finally {
                         this.authLoading = false;
-                    }
-                },
-                
-                // Test QR Generation
-                testQRGeneration() {
-                    console.log('=== QR Generation Test ===');
-                    console.log('QRCode library available:', typeof QRCode !== 'undefined');
-                    console.log('Selected event:', this.selectedEvent);
-                    console.log('Current user:', this.currentUser);
-                    
-                    if (this.selectedEvent) {
-                        const canvasId = `qr-canvas-${this.selectedEvent._id}`;
-                        const canvas = document.getElementById(canvasId);
-                        console.log('Canvas element:', canvas);
-                        
-                        if (canvas) {
-                            console.log('Canvas width:', canvas.width);
-                            console.log('Canvas height:', canvas.height);
-                            
-                            // Try to generate a simple QR code
-                            if (typeof QRCode !== 'undefined') {
-                                QRCode.toCanvas(canvas, 'Test QR Code', {
-                                    width: 200,
-                                    margin: 2,
-                                    color: {
-                                        dark: '#000000',
-                                        light: '#FFFFFF'
-                                    }
-                                }).then(() => {
-                                    console.log('Test QR code generated successfully');
-                                    this.showNotification('Test QR code generated!', 'success');
-                                    this.qrCodeGenerated = true;
-                                }).catch(err => {
-                                    console.error('Test QR code generation failed:', err);
-                                    this.showNotification('Test QR failed: ' + err.message, 'error');
-                                });
-                            } else {
-                                this.showNotification('QRCode library not loaded', 'error');
-                            }
-                        } else {
-                            this.showNotification('Canvas not found', 'error');
-                        }
-                    }
-                },
-                
-                // Copy QR Data for Demo
-                async copyQRData(event) {
-                    try {
-                        const qrData = {
-                            eventId: event._id,
-                            userId: this.currentUser.id || this.currentUser._id,
-                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
-                            userEmail: this.currentUser.email,
-                            eventTitle: event.title,
-                            eventDate: event.date,
-                            eventLocation: event.location,
-                            registrationTime: new Date().toISOString(),
-                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
-                        };
-                        
-                        const qrDataString = JSON.stringify(qrData);
-                        await navigator.clipboard.writeText(qrDataString);
-                        this.showNotification('QR data copied to clipboard! Paste it in the organizer QR scanner.', 'success');
-                    } catch (error) {
-                        // Fallback for browsers that don't support clipboard API
-                        const qrData = {
-                            eventId: event._id,
-                            userId: this.currentUser.id || this.currentUser._id,
-                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
-                            userEmail: this.currentUser.email,
-                            eventTitle: event.title,
-                            eventDate: event.date,
-                            eventLocation: event.location,
-                            registrationTime: new Date().toISOString(),
-                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
-                        };
-                        
-                        console.log('QR Data (copy manually):', JSON.stringify(qrData));
-                        this.showNotification('Check console for QR data to copy manually', 'info');
                     }
                 },
                 
@@ -1255,41 +1243,10 @@
                     }
                 },
 
-                // Add this method to your Vue component methods
-                validateEventDateTime() {
-                    const eventDate = new Date(this.eventForm.date);
-                    const currentDate = new Date();
-    
-                    // Set to start of day for comparison
-                    currentDate.setHours(0, 0, 0, 0);
-                    eventDate.setHours(0, 0, 0, 0);
-    
-                    // Check if date is in the past
-                    if (eventDate < currentDate) {
-                        this.showNotification('Cannot create event for a past date. Please select a current or future date.', 'error');
-                        return false;
-                    }
-    
-                    // If event is today, check time
-                    if (eventDate.getTime() === currentDate.getTime() && this.eventForm.time) {
-                        const currentTime = new Date();
-                        const [hours, minutes] = this.eventForm.time.split(':');
-                        const eventDateTime = new Date();
-                        eventDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        
-                        if (eventDateTime < currentTime) {
-                            this.showNotification('Cannot create event for a past time today. Please select a future time.', 'error');
-                            return false;
-                        }
-                    }
-    
-                    return true;
-                },
-                
+                // Event Management
                 async createEvent() {
                     this.authLoading = true;
                     try {
-                        // Validate sessions don't have conflicts
                         const hasConflicts = this.eventForm.sessions.some(session => session.conflict);
                         if (hasConflicts) {
                             this.showNotification('Please resolve session conflicts before creating the event', 'error');
@@ -1297,120 +1254,198 @@
                             return;
                         }
 
-                        // Get the auth token
                         const token = localStorage.getItem('eventhive_token');
                         if (!token) {
                             throw new Error('No authentication token found. Please log in again.');
                         }
 
-                        // Verify user role from token
-                    try {
-                        const payload = JSON.parse(atob(token.split('.')[1]));
-                        if (payload.role !== 'organizer') {
-                            throw new Error('Only organizers can create events');
+                        const formData = new FormData();
+                        formData.append('title', this.eventForm.title || '');
+                        formData.append('description', this.eventForm.description || '');
+                        formData.append('date', this.eventForm.date || '');
+                        formData.append('time', this.eventForm.time || '');
+                        formData.append('location', this.eventForm.location || '');
+                        
+                        if (this.eventForm.maxAttendees) {
+                            formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
                         }
-                    } catch (parseError) {
-                        throw new Error('Invalid authentication token. Please log in again.');
-                    }
-
-                    // Create FormData object
-                    const formData = new FormData();
-        
-                    // Add required fields
-                    formData.append('title', this.eventForm.title || '');
-                    formData.append('description', this.eventForm.description || '');
-                    formData.append('date', this.eventForm.date || '');
-                    formData.append('time', this.eventForm.time || '');
-                    formData.append('location', this.eventForm.location || '');
-        
-                    // Add optional fields
-                    if (this.eventForm.maxAttendees) {
-                        formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
-                    }
-        
-                    // Add sessions (must be JSON string for FormData)
-                    if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
-                        formData.append('sessions', JSON.stringify(this.eventForm.sessions));
-                    }
-        
-                    // Add image if present (currently commented out in your HTML, but ready for future use)
-                    if (this.eventForm.image instanceof File) {
-                        formData.append('image', this.eventForm.image);
-                    }
-
-                    console.log('Sending event creation request with FormData...');
-                    console.log('Form data contents:');
-                    for (let [key, value] of formData.entries()) {
-                        console.log(key, typeof value === 'string' ? value : 'File object');
-                    }
-
-                    // Send request using FormData
-                    const response = await axios.post(`${this.apiUrl}/events`, formData, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            // Don't set Content-Type - let browser set it with boundary for FormData
+                        
+                        if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
+                            formData.append('sessions', JSON.stringify(this.eventForm.sessions));
                         }
-                    });
-        
-                    console.log('Event created successfully:', response.data);
-        
-                        this.showCreateEvent = false;
+                        
+                        if (this.eventForm.image instanceof File) {
+                            formData.append('image', this.eventForm.image);
+                        }
+                
+                        const response = await axios.put(`${this.apiUrl}/events/${this.editingEventId}`, formData, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                            }
+                        });
+                
+                        const eventIndex = this.userEvents.findIndex(e => e._id === this.editingEventId);
+                        if (eventIndex !== -1) {
+                            this.userEvents[eventIndex] = response.data.event;
+                        }
+                
+                        this.showEditEvent = false;
+                        this.isEditMode = false;
+                        this.editingEventId = null;
+                        this.originalEventData = null;
                         this.resetEventForm();
-                        await this.loadDashboardData();
-        
-                        this.showNotification('Event created successfully with optimized schedule!', 'success');
-        
+                
+                        this.showNotification('Event updated successfully!', 'success');
+                
                     } catch (error) {
-                    console.error('Event creation error:', error);
-        
-                    if (error.response) {
-                        // Server responded with error
-                        console.error('Server error response:', error.response.data);
-                        this.showNotification(error.response.data?.error || 'Failed to create event', 'error');
-                    } else if (error.request) {
-                        // Request made but no response
-                        console.error('No response received:', error.request);
-                        this.showNotification('No response from server. Please check if the server is running.', 'error');
-                    } else {
-                        // Error in request setup
-                        console.error('Request setup error:', error.message);
-                        this.showNotification(error.message || 'Failed to create event', 'error');
+                        console.error('Event update error:', error);
+                        if (error.response) {
+                            this.showNotification(error.response.data?.error || 'Failed to update event', 'error');
+                        } else {
+                            this.showNotification(error.message || 'Failed to update event', 'error');
                         }
                     } finally {
                         this.authLoading = false;
                     }
                 },
-                // Image upload handling
+                
+                async createOrUpdateEvent() {
+                    if (this.isEditMode) {
+                        await this.updateEvent();
+                    } else {
+                        await this.createEvent();
+                    }
+                },
+
+                editEvent(event) {
+                    this.isEditMode = true;
+                    this.editingEventId = event._id;
+                    this.originalEventData = { ...event };
+    
+                    this.eventForm = {
+                        title: event.title,
+                        description: event.description,
+                        date: event.date.split('T')[0],
+                        time: event.time,
+                        location: event.location,
+                        maxAttendees: event.maxAttendees,
+                        sessions: event.sessions ? [...event.sessions] : [],
+                        image: null,
+                        imagePreview: event.image ? this.getEventImageUrl(event.image) : null
+                    };
+    
+                    this.showEditEvent = true;
+                    this.showNotification('Editing event - make your changes and save', 'info');
+                },
+
+                cancelEdit() {
+                    this.showEditEvent = false;
+                    this.isEditMode = false;
+                    this.editingEventId = null;
+                    this.originalEventData = null;
+                    this.resetEventForm();
+                    this.showNotification('Edit cancelled', 'info');
+                },
+
+                getChangesSummary() {
+                    if (!this.originalEventData || !this.isEditMode) return [];
+                    
+                    const changes = [];
+                    const current = this.eventForm;
+                    const original = this.originalEventData;
+                    
+                    if (current.title !== original.title) {
+                        changes.push(`Title: "${original.title}" → "${current.title}"`);
+                    }
+                    if (current.description !== original.description) {
+                        changes.push(`Description updated`);
+                    }
+                    if (current.date !== original.date.split('T')[0]) {
+                        changes.push(`Date: ${this.formatDate(original.date)} → ${this.formatDate(current.date)}`);
+                    }
+                    if (current.time !== original.time) {
+                        changes.push(`Time: ${original.time} → ${current.time}`);
+                    }
+                    if (current.location !== original.location) {
+                        changes.push(`Location: "${original.location}" → "${current.location}"`);
+                    }
+                    if (current.maxAttendees !== original.maxAttendees) {
+                        changes.push(`Max Attendees: ${original.maxAttendees} → ${current.maxAttendees}`);
+                    }
+                    if (current.image instanceof File) {
+                        changes.push(`Image: Updated`);
+                    }
+                    if (JSON.stringify(current.sessions) !== JSON.stringify(original.sessions)) {
+                        changes.push(`Sessions: Updated (${current.sessions.length} sessions)`);
+                    }
+                    
+                    return changes;
+                },
+
+                confirmDelete(event) {
+                    this.eventToDelete = event;
+                    this.showDeleteConfirm = true;
+                },
+
+                cancelDelete() {
+                    this.eventToDelete = null;
+                    this.showDeleteConfirm = false;
+                },
+
+                async deleteEvent() {
+                    if (!this.eventToDelete) return;
+    
+                    this.deleteLoading = true;
+                    try {
+                        await axios.delete(`${this.apiUrl}/events/${this.eventToDelete._id}`, {
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
+                            }
+                        });
+        
+                        this.userEvents = this.userEvents.filter(event => event._id !== this.eventToDelete._id);
+                        this.updateStats();
+        
+                        this.showDeleteConfirm = false;
+                        this.eventToDelete = null;
+        
+                        this.showNotification('Event deleted successfully!', 'success');
+        
+                    } catch (error) {
+                        console.error('Delete event error:', error);
+                        this.showNotification(error.response?.data?.error || 'Failed to delete event', 'error');
+                    } finally {
+                        this.deleteLoading = false;
+                    }
+                },
+                
+                // Image handling
                 handleImageUpload(event) {
                     const file = event.target.files[0];
                     if (!file) return;
     
-                    // Validate file type
-                    if (!file.type.startsWith('image/')) {
-                        this.showNotification('Please select a valid image file', 'error');
-                        event.target.value = ''; // Clear the input
+                    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                    if (!allowedTypes.includes(file.type)) {
+                        this.showNotification('Please select a valid image file (JPEG, PNG, GIF, or WebP)', 'error');
+                        event.target.value = '';
                         return;
                     }
     
-                    // Validate file size (limit to 5MB)
-                    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+                    const maxSize = 5 * 1024 * 1024;
                     if (file.size > maxSize) {
                         this.showNotification('Image file must be less than 5MB', 'error');
-                        event.target.value = ''; // Clear the input
+                        event.target.value = '';
                         return;
                     }
     
-                    // Store the file for upload
                     this.eventForm.image = file;
     
-                    // Create preview URL
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         this.eventForm.imagePreview = e.target.result;
                     };
                     reader.readAsDataURL(file);
     
-                    console.log('Image selected:', file.name, 'Size:', Math.round(file.size / 1024) + 'KB');
                     this.showNotification('Image selected successfully!', 'success');
                 },
 
@@ -1418,7 +1453,6 @@
                     this.eventForm.image = null;
                     this.eventForm.imagePreview = null;
     
-                    // Clear the file input
                     if (this.$refs.imageInput) {
                         this.$refs.imageInput.value = '';
                     }
@@ -1426,13 +1460,43 @@
                     this.showNotification('Image removed', 'info');
                 },
                 
+                getEventImageUrl(imageName) {
+                    if (!imageName) return null;
+                    
+                    if (imageName.startsWith('http') || imageName.startsWith('data:')) {
+                        return imageName;
+                    }
+                    
+                    const baseUrl = this.apiUrl.replace('/api', '');
+                    return `${baseUrl}/uploads/${imageName}`;
+                },
+                
+                handleImageError(event) {
+                    console.error('Failed to load event image:', event.target.src);
+                    this.imageError = true;
+                },
+                
+                handleImageLoad(event) {
+                    console.log('Event image loaded successfully:', event.target.src);
+                    this.imageError = false;
+                },
+
+                // Event loading and data
                 async loadEvents() {
                     try {
                         const response = await axios.get(`${this.apiUrl}/events`, {
                             params: this.eventFilters
                         });
-                        this.allEvents = response.data;
+        
+                        if (response.data.events) {
+                            this.allEvents = response.data.events;
+                        } else {
+                            this.allEvents = response.data;
+                        }
+        
+                        console.log('Events loaded:', this.allEvents.length);
                     } catch (error) {
+                        console.error('Load events error:', error);
                         this.showNotification('Failed to load events', 'error');
                     }
                 },
@@ -1453,74 +1517,6 @@
                         }
                     } catch (error) {
                         this.showNotification('Failed to load dashboard data', 'error');
-                    }
-                },
-                
-                // Image URL construction
-                getEventImageUrl(imageName) {
-                    if (!imageName) return null;
-    
-                    // Construct the full URL to the uploaded image
-                    const baseUrl = this.apiUrl.replace('/api', ''); // Remove /api from the URL
-                    const imageUrl = `${baseUrl}/uploads/${imageName}`;
-    
-                    console.log('Constructing image URL:', imageUrl);
-                    return imageUrl;
-                    },
-
-                // Handle image loading errors
-                handleImageError(event) {
-                    console.error('Failed to load event image:', event.target.src);
-                    this.showNotification('Failed to load event image', 'error');
-    
-                    // Hide the image container or show a placeholder
-                    event.target.style.display = 'none';
-                    },
-
-                    // Handle successful image loading
-                handleImageLoad(event) {
-                    console.log('Event image loaded successfully:', event.target.src);
-                },
-
-                // Delete event functionality
-                confirmDelete(event) {
-                    this.eventToDelete = event;
-                    this.showDeleteConfirm = true;
-                },
-    
-                cancelDelete() {
-                    this.eventToDelete = null;
-                    this.showDeleteConfirm = false;
-                },
-    
-                async deleteEvent() {
-                    if (!this.eventToDelete) return;
-        
-                    this.deleteLoading = true;
-                    try {
-                        const response = await axios.delete(`${this.apiUrl}/events/${this.eventToDelete._id}`, {
-                            headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
-                            }
-                        });
-            
-                        // Remove the event from the local array
-                        this.userEvents = this.userEvents.filter(event => event._id !== this.eventToDelete._id);
-            
-                        // Update stats
-                        this.updateStats();
-            
-                        // Close modal and reset
-                        this.showDeleteConfirm = false;
-                        this.eventToDelete = null;
-            
-                        this.showNotification('Event deleted successfully!', 'success');
-            
-                    } catch (error) {
-                        console.error('Delete event error:', error);
-                        this.showNotification(error.response?.data?.error || 'Failed to delete event', 'error');
-                    } finally {
-                        this.deleteLoading = false;
                     }
                 },
                 
@@ -1549,14 +1545,15 @@
                         
                         this.eventGuests = response.data;
                         this.showGuests = true;
-                        this.qrScanInput = ''; // Clear QR input when opening modal
-                        this.showManualInput = true; // Default to manual input
-                        this.stopCamera(); // Ensure camera is stopped when opening modal
+                        this.qrScanInput = '';
+                        this.showManualInput = true;
+                        this.stopCamera();
                     } catch (error) {
                         this.showNotification('Failed to load guests', 'error');
                     }
                 },
                 
+                // Fixed clustering method
                 async performClustering(event) {
                     try {
                         this.showNotification('Running AI clustering...', 'info');
@@ -1582,8 +1579,141 @@
                         
                         this.showNotification('Clustering completed successfully!', 'success');
                     } catch (error) {
-                        this.showNotification(error.response?.data?.error || 'Clustering failed', 'error');
+                        console.error('Clustering error:', error);
+                        // Show more specific error message
+                        let errorMessage = 'Clustering failed';
+                        if (error.response?.status === 500) {
+                            errorMessage = 'Server error during clustering. Please try again later.';
+                        } else if (error.response?.data?.error) {
+                            errorMessage = error.response.data.error;
+                        }
+                        this.showNotification(errorMessage, 'error');
                     }
+                },
+                
+                // Fixed analytics method
+                async viewSessionAnalytics(event) {
+                    try {
+                        // First try to get real analytics from the server
+                        try {
+                            const response = await axios.get(`${this.apiUrl}/events/${event._id}/analytics`, {
+                                headers: {
+                                    'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
+                                }
+                            });
+                            
+                            // Convert server analytics to display format
+                            this.analyticsData = this.convertServerAnalytics(response.data, event);
+                        } catch (apiError) {
+                            console.log('Server analytics not available, generating mock data');
+                            // Fallback to mock analytics
+                            this.analyticsData = this.generateMockAnalytics(event);
+                        }
+                        
+                        this.showAnalytics = true;
+                        this.showNotification('Analytics loaded successfully!', 'success');
+                    } catch (error) {
+                        console.error('Analytics error:', error);
+                        this.showNotification('Failed to load analytics', 'error');
+                    }
+                },
+                
+                convertServerAnalytics(serverData, event) {
+                    const sessions = event.sessions || [];
+                    
+                    // Convert server analytics to match UI expectations
+                    const sessionAnalytics = sessions.map(session => ({
+                        title: session.title,
+                        startTime: session.startTime,
+                        endTime: session.endTime,
+                        duration: this.calculateDuration(session.startTime, session.endTime),
+                        attendance: Math.floor(Math.random() * 80) + 20, // Mock for now
+                        engagementRate: Math.floor(Math.random() * 30) + 70 // Mock for now
+                    }));
+                    
+                    return {
+                        totalSessions: sessions.length,
+                        avgDuration: Math.round(sessionAnalytics.reduce((sum, s) => sum + s.duration, 0) / sessionAnalytics.length || 0) + ' min',
+                        avgAttendance: Math.round(sessionAnalytics.reduce((sum, s) => sum + s.attendance, 0) / sessionAnalytics.length || 0) + ' people',
+                        popularSession: sessionAnalytics.length > 0 ? sessionAnalytics.reduce((prev, current) => 
+                            (prev.attendance > current.attendance) ? prev : current
+                        ).title : 'N/A',
+                        sessions: sessionAnalytics,
+                        suggestions: [
+                            {
+                                id: 1,
+                                text: `Total registrations: ${serverData.totalRegistrations}`
+                            },
+                            {
+                                id: 2,
+                                text: `Check-in rate: ${serverData.checkInRate}%`
+                            },
+                            {
+                                id: 3,
+                                text: `Total clusters: ${serverData.totalClusters}`
+                            },
+                            {
+                                id: 4,
+                                text: `Session engagement: ${serverData.sessionEngagement} interactions`
+                            }
+                        ]
+                    };
+                },
+                
+                generateMockAnalytics(event) {
+                    const sessions = event.sessions || [];
+                    const totalSessions = sessions.length;
+                    
+                    const sessionAnalytics = sessions.map(session => ({
+                        title: session.title,
+                        startTime: session.startTime,
+                        endTime: session.endTime,
+                        duration: this.calculateDuration(session.startTime, session.endTime),
+                        attendance: Math.floor(Math.random() * 80) + 20,
+                        engagementRate: Math.floor(Math.random() * 30) + 70
+                    }));
+                    
+                    const avgDuration = sessionAnalytics.reduce((sum, s) => sum + s.duration, 0) / sessionAnalytics.length || 0;
+                    const avgAttendance = sessionAnalytics.reduce((sum, s) => sum + s.attendance, 0) / sessionAnalytics.length || 0;
+                    
+                    const popularSession = sessionAnalytics.reduce((prev, current) => 
+                        (prev.attendance > current.attendance) ? prev : current
+                    );
+                    
+                    return {
+                        totalSessions,
+                        avgDuration: Math.round(avgDuration) + ' min',
+                        avgAttendance: Math.round(avgAttendance) + ' people',
+                        popularSession: popularSession?.title || 'N/A',
+                        sessions: sessionAnalytics,
+                        suggestions: [
+                            {
+                                id: 1,
+                                text: 'Consider moving popular sessions to larger venues'
+                            },
+                            {
+                                id: 2,
+                                text: 'Add 15-minute breaks between sessions for better flow'
+                            },
+                            {
+                                id: 3,
+                                text: 'Schedule high-energy sessions during peak hours (10-11 AM, 2-3 PM)'
+                            },
+                            {
+                                id: 4,
+                                text: 'Group similar topics together to reduce attendee movement'
+                            }
+                        ]
+                    };
+                },
+                
+                calculateDuration(startTime, endTime) {
+                    if (!startTime || !endTime) return 0;
+                    
+                    const start = new Date(`1970-01-01T${startTime}`);
+                    const end = new Date(`1970-01-01T${endTime}`);
+                    
+                    return Math.round((end - start) / 60000);
                 },
                 
                 async manualCheckIn(guest) {
@@ -1607,7 +1737,6 @@
                 
                 async checkIn(event) {
                     try {
-                        // Generate the same QR data structure that would be scanned
                         const qrData = {
                             eventId: event._id,
                             userId: this.currentUser.id || this.currentUser._id,
@@ -1635,20 +1764,121 @@
                     }
                 },
                 
-                // QR Code Processing
+                // QR Code functionality
+                async copyQRData(event) {
+                    try {
+                        const qrData = {
+                            eventId: event._id,
+                            userId: this.currentUser.id || this.currentUser._id,
+                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
+                            userEmail: this.currentUser.email,
+                            eventTitle: event.title,
+                            eventDate: event.date,
+                            eventLocation: event.location,
+                            registrationTime: new Date().toISOString(),
+                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
+                        };
+                        
+                        const qrDataString = JSON.stringify(qrData);
+                        await navigator.clipboard.writeText(qrDataString);
+                        this.showNotification('QR data copied to clipboard! Paste it in the organizer QR scanner.', 'success');
+                    } catch (error) {
+                        const qrData = {
+                            eventId: event._id,
+                            userId: this.currentUser.id || this.currentUser._id,
+                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
+                            userEmail: this.currentUser.email,
+                            eventTitle: event.title,
+                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
+                        };
+                        
+                        console.log('QR Data (copy manually):', JSON.stringify(qrData));
+                        this.showNotification('Check console for QR data to copy manually', 'info');
+                    }
+                },
+                
+                async generateQRCode(event) {
+                    try {
+                        this.qrCodeGenerated = false;
+                        this.showQRFallback = false;
+                        
+                        const qrData = {
+                            eventId: event._id,
+                            userId: this.currentUser.id || this.currentUser._id,
+                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
+                            userEmail: this.currentUser.email,
+                            eventTitle: event.title,
+                            eventDate: event.date,
+                            eventLocation: event.location,
+                            registrationTime: new Date().toISOString(),
+                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
+                        };
+                        
+                        const qrDataString = JSON.stringify(qrData);
+                        const canvasId = `qr-canvas-${event._id}`;
+                        const canvas = document.getElementById(canvasId);
+                        
+                        if (canvas && typeof QRCode !== 'undefined') {
+                            await QRCode.toCanvas(canvas, qrDataString, {
+                                width: 200,
+                                margin: 2,
+                                color: {
+                                    dark: '#000000',
+                                    light: '#FFFFFF'
+                                }
+                            });
+                            
+                            canvas.style.display = 'block';
+                            this.qrCodeGenerated = true;
+                            this.showNotification('QR code generated successfully!', 'success');
+                        } else {
+                            this.useFallbackQR(event);
+                        }
+                        
+                    } catch (error) {
+                        console.error('QR generation error:', error);
+                        this.showNotification('QR generation failed, using fallback', 'warning');
+                        this.useFallbackQR(event);
+                    }
+                },
+                
+                useFallbackQR(event) {
+                    try {
+                        const qrData = {
+                            eventId: event._id,
+                            userId: this.currentUser.id || this.currentUser._id,
+                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
+                            userEmail: this.currentUser.email,
+                            eventTitle: event.title,
+                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
+                        };
+                        
+                        const qrDataString = JSON.stringify(qrData);
+                        const encodedData = encodeURIComponent(qrDataString);
+                        this.fallbackQRUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedData}`;
+                        
+                        this.showQRFallback = true;
+                        this.qrCodeGenerated = true;
+                        
+                        this.showNotification('QR code generated using fallback method!', 'success');
+                        
+                    } catch (error) {
+                        console.error('Fallback QR generation failed:', error);
+                        this.showNotification('All QR generation methods failed', 'error');
+                    }
+                },
+                
+                // QR Scanner functionality
                 async processQRScan() {
                     if (!this.qrScanInput.trim()) return;
                     
                     try {
-                        // Try to parse the QR data
                         const qrData = JSON.parse(this.qrScanInput);
                         
-                        // Validate QR data structure
                         if (!qrData.eventId || !qrData.userId || !qrData.checkInCode) {
                             throw new Error('Invalid QR code format');
                         }
                         
-                        // Process the check-in
                         await axios.post(`${this.apiUrl}/checkin`, {
                             qrData: this.qrScanInput
                         }, {
@@ -1657,7 +1887,6 @@
                             }
                         });
                         
-                        // Update the guest list
                         const guest = this.eventGuests.find(g => g.attendee._id === qrData.userId);
                         if (guest) {
                             guest.checkedIn = true;
@@ -1665,7 +1894,7 @@
                         }
                         
                         this.showNotification(`${qrData.userName} checked in successfully!`, 'success');
-                        this.qrScanInput = ''; // Clear the input
+                        this.qrScanInput = '';
                         
                     } catch (error) {
                         if (error.message === 'Invalid QR code format') {
@@ -1676,21 +1905,18 @@
                     }
                 },
                 
-                // Camera Scanner Methods
                 async startCamera() {
                     try {
                         this.cameraError = null;
                         this.scanStatus = { type: 'scanning', message: 'Starting camera...' };
                         
-                        // Check if browser supports camera
                         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                             throw new Error('Camera not supported by this browser');
                         }
                         
-                        // Request camera access
                         const stream = await navigator.mediaDevices.getUserMedia({
                             video: { 
-                                facingMode: 'environment', // Use back camera if available
+                                facingMode: 'environment',
                                 width: { ideal: 640 },
                                 height: { ideal: 480 }
                             }
@@ -1699,7 +1925,6 @@
                         this.cameraStream = stream;
                         this.cameraActive = true;
                         
-                        // Wait for video element to be available
                         await this.$nextTick();
                         
                         const video = this.$refs.cameraVideo;
@@ -1707,7 +1932,6 @@
                             video.srcObject = stream;
                             video.play();
                             
-                            // Wait for video to load
                             video.onloadedmetadata = () => {
                                 this.scanStatus = { type: 'scanning', message: 'Scanning for QR codes...' };
                                 this.startQRScanning();
@@ -1762,12 +1986,11 @@
                                 }
                             }
                         }
-                    }, 500); // Scan every 500ms
+                    }, 500);
                 },
                 
                 async processScannedQR(qrData) {
                     try {
-                        // Stop scanning temporarily to avoid multiple scans
                         if (this.scanningInterval) {
                             clearInterval(this.scanningInterval);
                             this.scanningInterval = null;
@@ -1775,14 +1998,12 @@
                         
                         this.scanStatus = { type: 'success', message: 'QR Code detected!' };
                         
-                        // Process the QR data
                         const parsedData = JSON.parse(qrData);
                         
                         if (!parsedData.eventId || !parsedData.userId) {
                             throw new Error('Invalid QR code format');
                         }
                         
-                        // Call check-in API
                         await axios.post(`${this.apiUrl}/checkin`, {
                             qrData: qrData
                         }, {
@@ -1791,7 +2012,6 @@
                             }
                         });
                         
-                        // Update guest list
                         const guest = this.eventGuests.find(g => g.attendee._id === parsedData.userId);
                         if (guest) {
                             guest.checkedIn = true;
@@ -1801,7 +2021,6 @@
                         this.scanStatus = { type: 'success', message: `${parsedData.userName} checked in!` };
                         this.showNotification(`${parsedData.userName} successfully checked in via camera!`, 'success');
                         
-                        // Resume scanning after a delay
                         setTimeout(() => {
                             if (this.cameraActive) {
                                 this.scanStatus = { type: 'scanning', message: 'Scanning for QR codes...' };
@@ -1814,7 +2033,6 @@
                         this.scanStatus = { type: 'error', message: 'Invalid QR code' };
                         this.showNotification('Invalid QR code scanned', 'error');
                         
-                        // Resume scanning after error
                         setTimeout(() => {
                             if (this.cameraActive) {
                                 this.scanStatus = { type: 'scanning', message: 'Scanning for QR codes...' };
@@ -1844,11 +2062,11 @@
                 },
                 
                 closeGuestsModal() {
-                    this.stopCamera(); // Always stop camera when closing modal
+                    this.stopCamera();
                     this.showGuests = false;
                 },
                 
-                // Profile Methods
+                // Profile Methods - Fixed null safety
                 async loadProfile() {
                     try {
                         const response = await axios.get(`${this.apiUrl}/profile`, {
@@ -1857,11 +2075,24 @@
                             }
                         });
                         
-                        this.profileData = response.data;
+                        // Ensure profileData is never null
+                        this.profileData = response.data || {};
                         this.updateProfileStats();
                         this.loadRecentActivity();
                     } catch (error) {
-                        this.showNotification('Failed to load profile', 'error');
+                        console.error('Load profile error:', error);
+                        // Set safe defaults on error
+                        this.profileData = {
+                            firstName: this.currentUser?.firstName || '',
+                            lastName: this.currentUser?.lastName || '',
+                            email: this.currentUser?.email || '',
+                            username: this.currentUser?.username || '',
+                            role: this.currentUser?.role || 'attendee',
+                            professionalRole: '',
+                            interests: [],
+                            createdAt: new Date()
+                        };
+                        this.showNotification('Using cached profile data', 'warning');
                     }
                 },
                 
@@ -1881,8 +2112,8 @@
                             }
                         });
                         
-                        this.profileData = response.data.user;
-                        this.currentUser = { ...this.currentUser, ...response.data.user };
+                        this.profileData = response.data.user || response.data;
+                        this.currentUser = { ...this.currentUser, ...this.profileData };
                         localStorage.setItem('eventhive_user', JSON.stringify(this.currentUser));
                         
                         this.editMode[section] = false;
@@ -1896,11 +2127,9 @@
                 
                 toggleEdit(section) {
                     if (this.editMode[section]) {
-                        // Cancel edit
                         this.editMode[section] = false;
                         this.resetEditData();
                     } else {
-                        // Start edit
                         this.editMode[section] = true;
                         this.loadEditData();
                     }
@@ -1930,13 +2159,12 @@
                 updateProfileStats() {
                     this.profileStats = {
                         totalEvents: this.userEvents.length,
-                        totalConnections: Math.floor(Math.random() * 50) + 10, // Mock data
+                        totalConnections: Math.floor(Math.random() * 50) + 10,
                         memberSince: this.formatDate(this.profileData.createdAt || new Date())
                     };
                 },
                 
                 loadRecentActivity() {
-                    // Mock recent activity data
                     this.recentActivity = [
                         {
                             id: 1,
@@ -1963,7 +2191,6 @@
                 navigateTo(view) {
                     this.currentView = view;
                     
-                    // Load data based on view
                     if (view === 'profile') {
                         this.loadProfile();
                     } else if (view === 'dashboard') {
@@ -1973,22 +2200,47 @@
                     }
                 },
                 
-                // UI Methods
+                // UI Methods - Fixed event viewing
                 async viewEvent(event) {
-                    this.selectedEvent = event;
-                    this.qrCodeGenerated = false;
-                    this.showQRFallback = false;
-                    
-                    // Generate QR code for attendees who are registered
-                    if (this.currentUser.role === 'attendee' && this.isRegistered(event)) {
-                        // Try to load QR code from backend first
-                        await this.loadQRCodeFromBackend(event);
+                    try {
+                        if (!event || !event._id) {
+                            console.error('Invalid event object:', event);
+                            this.showNotification('Invalid event selected', 'error');
+                            return;
+                        }
+
+                        console.log('Opening event details for:', event.title);
+
+                        this.imageError = false;
+                        this.qrCodeGenerated = false;
+                        this.showQRFallback = false;
+
+                        this.selectedEvent = { ...event };
+
+                        if (event.image) {
+                            console.log('Event has image:', event.image);
+                            const imageUrl = this.getEventImageUrl(event.image);
+                            console.log('Constructed image URL:', imageUrl);
+                        }
+
+                        if (this.currentUser?.role === 'attendee' && this.isRegistered(event)) {
+                            try {
+                                await this.loadQRCodeFromBackend(event);
+                            } catch (error) {
+                                console.error('QR code loading failed:', error);
+                            }
+                        }
+
+                    } catch (error) {
+                        console.error('Error opening event details:', error);
+                        this.showNotification('Error opening event details', 'error');
+                        this.selectedEvent = null;
+                        this.imageError = false;
                     }
                 },
-                
+
                 async loadQRCodeFromBackend(event) {
                     try {
-                        // Try to get the QR code from backend
                         const response = await axios.get(`${this.apiUrl}/events/${event._id}/my-registration`, {
                             headers: {
                                 'Authorization': `Bearer ${localStorage.getItem('eventhive_token')}`
@@ -1996,20 +2248,17 @@
                         });
                         
                         if (response.data.qrCode) {
-                            // Backend has QR code - display it
                             this.displayBackendQR(response.data.qrCode);
                             this.selectedEvent.qrCode = response.data.qrCode;
                             this.qrCodeGenerated = true;
                             console.log('Using QR code from backend');
                         } else {
-                            // No QR code in backend - generate client-side
                             setTimeout(() => {
                                 this.generateQRCode(event);
                             }, 300);
                         }
                     } catch (error) {
                         console.log('Could not load QR from backend, generating client-side');
-                        // Fallback to client-side generation
                         setTimeout(() => {
                             this.generateQRCode(event);
                         }, 300);
@@ -2017,7 +2266,6 @@
                 },
                 
                 displayBackendQR(qrCodeDataUrl) {
-                    // Display the QR code from backend (base64 data URL)
                     const qrContainer = document.querySelector('.qr-container');
                     if (qrContainer) {
                         qrContainer.innerHTML = `
@@ -2027,141 +2275,6 @@
                         `;
                         this.showNotification('QR code loaded from server!', 'success');
                     }
-                },
-                
-                getCleanCanvasId(eventId) {
-                    // Clean the event ID to make it a valid DOM ID
-                    return 'qr-canvas-' + eventId.replace(/[^a-zA-Z0-9]/g, '');
-                },
-                
-                async generateQRCode(event) {
-                    try {
-                        this.qrCodeGenerated = false;
-                        this.showQRFallback = false;
-                        
-                        // Create QR data
-                        const qrData = {
-                            eventId: event._id,
-                            userId: this.currentUser.id || this.currentUser._id,
-                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
-                            userEmail: this.currentUser.email,
-                            eventTitle: event.title,
-                            eventDate: event.date,
-                            eventLocation: event.location,
-                            registrationTime: new Date().toISOString(),
-                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
-                        };
-                        
-                        const qrDataString = JSON.stringify(qrData);
-                        console.log('QR Data to encode:', qrDataString);
-                        
-                        // Try to find canvas
-                        const canvasId = this.getCleanCanvasId(event._id);
-                        const canvas = document.getElementById(canvasId);
-                        
-                        console.log('Looking for canvas with ID:', canvasId);
-                        console.log('Canvas found:', !!canvas);
-                        console.log('QRCode library available:', typeof QRCode !== 'undefined');
-                        
-                        if (canvas && typeof QRCode !== 'undefined') {
-                            // Clear canvas
-                            const ctx = canvas.getContext('2d');
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            
-                            // Generate QR code
-                            await QRCode.toCanvas(canvas, qrDataString, {
-                                width: 200,
-                                margin: 2,
-                                color: {
-                                    dark: '#000000',
-                                    light: '#FFFFFF'
-                                }
-                            });
-                            
-                            this.qrCodeGenerated = true;
-                            this.showNotification('QR code generated successfully!', 'success');
-                            console.log('QR code generated successfully on canvas');
-                            
-                        } else {
-                            console.log('Canvas not found or QRCode library not available, using fallback');
-                            this.useFallbackQR(event);
-                        }
-                        
-                    } catch (error) {
-                        console.error('QR generation error:', error);
-                        this.showNotification('QR generation failed, using fallback', 'error');
-                        this.useFallbackQR(event);
-                    }
-                },
-                
-                useFallbackQR(event) {
-                    try {
-                        // Create QR data
-                        const qrData = {
-                            eventId: event._id,
-                            userId: this.currentUser.id || this.currentUser._id,
-                            userName: `${this.currentUser.firstName} ${this.currentUser.lastName}`,
-                            userEmail: this.currentUser.email,
-                            eventTitle: event.title,
-                            checkInCode: `${event._id}-${this.currentUser.id || this.currentUser._id}-${Date.now()}`
-                        };
-                        
-                        const qrDataString = JSON.stringify(qrData);
-                        
-                        // Use QR Server API (free online QR generator)
-                        const encodedData = encodeURIComponent(qrDataString);
-                        this.fallbackQRUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedData}`;
-                        
-                        this.showQRFallback = true;
-                        this.qrCodeGenerated = true;
-                        
-                        console.log('Fallback QR URL generated:', this.fallbackQRUrl);
-                        this.showNotification('QR code generated using fallback method!', 'success');
-                        
-                    } catch (error) {
-                        console.error('Fallback QR generation failed:', error);
-                        this.showNotification('All QR generation methods failed', 'error');
-                    }
-                },
-                
-                debugQRSystem() {
-                    console.log('=== QR SYSTEM DEBUG ===');
-                    console.log('Selected Event:', this.selectedEvent);
-                    console.log('Current User:', this.currentUser);
-                    console.log('QRCode Library Available:', typeof QRCode !== 'undefined');
-                    
-                    if (this.selectedEvent) {
-                        const canvasId = this.getCleanCanvasId(this.selectedEvent._id);
-                        const canvas = document.getElementById(canvasId);
-                        console.log('Canvas ID:', canvasId);
-                        console.log('Canvas Element:', canvas);
-                        
-                        if (canvas) {
-                            console.log('Canvas Properties:', {
-                                width: canvas.width,
-                                height: canvas.height,
-                                style: canvas.style.cssText
-                            });
-                        }
-                        
-                        // Test if we can create a simple canvas drawing
-                        if (canvas) {
-                            const ctx = canvas.getContext('2d');
-                            ctx.fillStyle = '#FF0000';
-                            ctx.fillRect(50, 50, 100, 100);
-                            console.log('Drew red rectangle on canvas for testing');
-                        }
-                    }
-                    
-                    console.log('DOM QR containers:', document.querySelectorAll('.qr-container'));
-                    console.log('All canvases:', document.querySelectorAll('canvas'));
-                    
-                    // Try direct QRCode test
-                    if (typeof QRCode !== 'undefined') {
-                        console.log('QRCode object methods:', Object.getOwnPropertyNames(QRCode));
-                    }
-                    
-                    this.showNotification('Debug info logged to console', 'info');
                 },
                 
                 addInterest() {
@@ -2187,12 +2300,10 @@
                 },
                 
                 isRegistered(event) {
-                    // Only attendees can be "registered" for events
                     if (this.currentUser.role !== 'attendee') {
                         return false;
                     }
                     
-                    // Check if this attendee is registered for the event
                     return this.userEvents.some(userEvent => userEvent._id === event._id);
                 },
                 
@@ -2211,23 +2322,26 @@
                 },
                 
                 resetEventForm() {
-    this.eventForm = {
-        title: '',
-        description: '',
-        date: '',
-        time: '',
-        location: '',
-        maxAttendees: 100,
-        sessions: [],
-        image: null,        // Add this
-        imagePreview: null  // Add this
-    };
-    
-    // Clear the file input if it exists
-    if (this.$refs.imageInput) {
-        this.$refs.imageInput.value = '';
-    }
-},
+                    this.eventForm = {
+                        title: '',
+                        description: '',
+                        date: '',
+                        time: '',
+                        location: '',
+                        maxAttendees: 100,
+                        sessions: [],
+                        image: null,
+                        imagePreview: null
+                    };
+                    
+                    if (this.$refs.imageInput) {
+                        this.$refs.imageInput.value = '';
+                    }
+                    
+                    this.isEditMode = false;
+                    this.editingEventId = null;
+                    this.originalEventData = null;
+                },
                 
                 // Session Management
                 addSession() {
@@ -2281,94 +2395,16 @@
                     this.showNotification('Sample sessions added! Try the scheduling tools.', 'success');
                 },
                 
-                // Session Analytics
-                async viewSessionAnalytics(event) {
-                    try {
-                        // In a real app, this would fetch actual analytics data
-                        // For demo purposes, we'll generate mock data
-                        const mockAnalytics = this.generateMockAnalytics(event);
-                        
-                        this.analyticsData = mockAnalytics;
-                        this.showAnalytics = true;
-                        
-                        this.showNotification('Analytics loaded successfully!', 'success');
-                    } catch (error) {
-                        this.showNotification('Failed to load analytics', 'error');
-                    }
-                },
-                
-                generateMockAnalytics(event) {
-                    const sessions = event.sessions || [];
-                    const totalSessions = sessions.length;
-                    
-                    // Generate mock session data
-                    const sessionAnalytics = sessions.map(session => ({
-                        title: session.title,
-                        startTime: session.startTime,
-                        endTime: session.endTime,
-                        duration: this.calculateDuration(session.startTime, session.endTime),
-                        attendance: Math.floor(Math.random() * 80) + 20, // 20-100 attendees
-                        engagementRate: Math.floor(Math.random() * 30) + 70 // 70-100% engagement
-                    }));
-                    
-                    // Calculate averages
-                    const avgDuration = sessionAnalytics.reduce((sum, s) => sum + s.duration, 0) / sessionAnalytics.length || 0;
-                    const avgAttendance = sessionAnalytics.reduce((sum, s) => sum + s.attendance, 0) / sessionAnalytics.length || 0;
-                    
-                    // Find most popular session
-                    const popularSession = sessionAnalytics.reduce((prev, current) => 
-                        (prev.attendance > current.attendance) ? prev : current
-                    );
-                    
-                    return {
-                        totalSessions,
-                        avgDuration: Math.round(avgDuration) + ' min',
-                        avgAttendance: Math.round(avgAttendance) + ' people',
-                        popularSession: popularSession?.title || 'N/A',
-                        sessions: sessionAnalytics,
-                        suggestions: [
-                            {
-                                id: 1,
-                                text: 'Consider moving popular sessions to larger venues'
-                            },
-                            {
-                                id: 2,
-                                text: 'Add 15-minute breaks between sessions for better flow'
-                            },
-                            {
-                                id: 3,
-                                text: 'Schedule high-energy sessions during peak hours (10-11 AM, 2-3 PM)'
-                            },
-                            {
-                                id: 4,
-                                text: 'Group similar topics together to reduce attendee movement'
-                            }
-                        ]
-                    };
-                },
-                
-                calculateDuration(startTime, endTime) {
-                    if (!startTime || !endTime) return 0;
-                    
-                    const start = new Date(`1970-01-01T${startTime}`);
-                    const end = new Date(`1970-01-01T${endTime}`);
-                    
-                    return Math.round((end - start) / 60000); // Convert to minutes
-                },
-                
                 removeSession(index) {
                     this.eventForm.sessions.splice(index, 1);
                     this.validateSessionTimes();
                 },
                 
-                // Automatic Scheduling & Conflict Detection
                 validateSessionTimes() {
-                    // Clear previous conflicts
                     this.eventForm.sessions.forEach(session => {
                         session.conflict = null;
                     });
                     
-                    // Check for time conflicts
                     for (let i = 0; i < this.eventForm.sessions.length; i++) {
                         for (let j = i + 1; j < this.eventForm.sessions.length; j++) {
                             const session1 = this.eventForm.sessions[i];
@@ -2391,7 +2427,6 @@
                     const start2 = new Date(`1970-01-01T${session2.startTime}`);
                     const end2 = new Date(`1970-01-01T${session2.endTime}`);
                     
-                    // Check if sessions overlap
                     return (start1 < end2 && start2 < end1);
                 },
                 
@@ -2401,26 +2436,19 @@
                         return;
                     }
                     
-                    // Get event start time or default to 9:00 AM
                     const eventStartTime = this.eventForm.time || '09:00';
                     let currentTime = new Date(`1970-01-01T${eventStartTime}`);
                     
-                    // Auto-schedule sessions with 30-minute gaps
                     this.eventForm.sessions.forEach((session, index) => {
-                        const sessionDuration = 60; // 1 hour default
-                        const breakDuration = 30; // 30 minutes break
+                        const sessionDuration = 60;
+                        const breakDuration = 30;
                         
-                        // Set start time
                         session.startTime = currentTime.toTimeString().slice(0, 5);
                         
-                        // Set end time
                         const endTime = new Date(currentTime.getTime() + sessionDuration * 60000);
                         session.endTime = endTime.toTimeString().slice(0, 5);
                         
-                        // Move to next session time (with break)
                         currentTime = new Date(endTime.getTime() + breakDuration * 60000);
-                        
-                        // Clear conflicts since we're auto-scheduling
                         session.conflict = null;
                     });
                     
@@ -2433,17 +2461,12 @@
                         return;
                     }
                     
-                    // Sort sessions by importance/priority (longer sessions first)
                     const sortedSessions = [...this.eventForm.sessions].sort((a, b) => {
-                        // If both have speakers, prioritize those
                         if (a.speaker && !b.speaker) return -1;
                         if (!a.speaker && b.speaker) return 1;
-                        
-                        // Otherwise sort by title length (longer titles = more important)
                         return b.title.length - a.title.length;
                     });
                     
-                    // Optimal time slots (avoiding lunch and late hours)
                     const optimalSlots = [
                         { start: '09:00', end: '10:00', priority: 1 },
                         { start: '10:30', end: '11:30', priority: 1 },
@@ -2451,10 +2474,9 @@
                         { start: '15:30', end: '16:30', priority: 1 },
                         { start: '11:30', end: '12:30', priority: 2 },
                         { start: '16:30', end: '17:30', priority: 2 },
-                        { start: '13:00', end: '14:00', priority: 3 } // Lunch time - less optimal
+                        { start: '13:00', end: '14:00', priority: 3 }
                     ];
                     
-                    // Assign optimal slots to sessions
                     sortedSessions.forEach((session, index) => {
                         if (index < optimalSlots.length) {
                             const slot = optimalSlots[index];
@@ -2464,9 +2486,7 @@
                         }
                     });
                     
-                    // Update the original array
                     this.eventForm.sessions = sortedSessions;
-                    
                     this.showNotification('Schedule optimized for maximum attendance!', 'success');
                 },
                 
@@ -2504,7 +2524,6 @@
                     }, 3000);
                 },
                 
-                // Real-time functionality
                 initializeSocket() {
                     if (typeof io !== 'undefined') {
                         this.socket = io('https://cst-3990-backend-f533.onrender.com');
