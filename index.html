@@ -2542,7 +2542,7 @@ handleImageLoad(event) {
                 // Real-time functionality
                 initializeSocket() {
                     if (typeof io !== 'undefined') {
-                        this.socket = io('http://localhost:5000');
+                        this.socket = io('https://cst-3990-backend-f533.onrender.com/api');
                         
                         this.socket.on('checkin_update', (data) => {
                             this.showNotification(`${data.attendeeName} checked in!`, 'success');
