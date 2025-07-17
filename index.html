@@ -1244,78 +1244,92 @@
                 },
 
                 // Event Management
-                async createEvent() {
-                    this.authLoading = true;
-                    try {
-                        const hasConflicts = this.eventForm.sessions.some(session => session.conflict);
-                        if (hasConflicts) {
-                            this.showNotification('Please resolve session conflicts before creating the event', 'error');
-                            this.authLoading = false;
-                            return;
-                        }
+                // Event Management
+async createEvent() {
+    this.authLoading = true;
+    try {
+        const hasConflicts = this.eventForm.sessions.some(session => session.conflict);
+        if (hasConflicts) {
+            this.showNotification('Please resolve session conflicts before creating the event', 'error');
+            this.authLoading = false;
+            return;
+        }
 
-                        const token = localStorage.getItem('eventhive_token');
-                        if (!token) {
-                            throw new Error('No authentication token found. Please log in again.');
-                        }
+        const token = localStorage.getItem('eventhive_token');
+        if (!token) {
+            throw new Error('No authentication token found. Please log in again.');
+        }
 
-                        const formData = new FormData();
-                        formData.append('title', this.eventForm.title || '');
-                        formData.append('description', this.eventForm.description || '');
-                        formData.append('date', this.eventForm.date || '');
-                        formData.append('time', this.eventForm.time || '');
-                        formData.append('location', this.eventForm.location || '');
-                        
-                        if (this.eventForm.maxAttendees) {
-                            formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
-                        }
-                        
-                        if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
-                            formData.append('sessions', JSON.stringify(this.eventForm.sessions));
-                        }
-                        
-                        if (this.eventForm.image instanceof File) {
-                            formData.append('image', this.eventForm.image);
-                        }
-                
-                        const response = await axios.put(`${this.apiUrl}/events/${this.editingEventId}`, formData, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                            }
-                        });
-                
-                        const eventIndex = this.userEvents.findIndex(e => e._id === this.editingEventId);
-                        if (eventIndex !== -1) {
-                            this.userEvents[eventIndex] = response.data.event;
-                        }
-                
-                        this.showEditEvent = false;
-                        this.isEditMode = false;
-                        this.editingEventId = null;
-                        this.originalEventData = null;
-                        this.resetEventForm();
-                
-                        this.showNotification('Event updated successfully!', 'success');
-                
-                    } catch (error) {
-                        console.error('Event update error:', error);
-                        if (error.response) {
-                            this.showNotification(error.response.data?.error || 'Failed to update event', 'error');
-                        } else {
-                            this.showNotification(error.message || 'Failed to update event', 'error');
-                        }
-                    } finally {
-                        this.authLoading = false;
-                    }
-                },
-                
-                async createOrUpdateEvent() {
-                    if (this.isEditMode) {
-                        await this.updateEvent();
-                    } else {
-                        await this.createEvent();
-                    }
-                },
+        const formData = new FormData();
+        formData.append('title', this.eventForm.title || '');
+        formData.append('description', this.eventForm.description || '');
+        formData.append('date', this.eventForm.date || '');
+        formData.append('time', this.eventForm.time || '');
+        formData.append('location', this.eventForm.location || '');
+        
+        if (this.eventForm.maxAttendees) {
+            formData.append('maxAttendees', this.eventForm.maxAttendees.toString());
+        }
+        
+        if (this.eventForm.sessions && this.eventForm.sessions.length > 0) {
+            formData.append('sessions', JSON.stringify(this.eventForm.sessions));
+        }
+        
+        if (this.eventForm.image instanceof File) {
+            formData.append('image', this.eventForm.image);
+        }
+
+        let response;
+
+        if (this.isEditMode) {
+            // Update event
+            response = await axios.put(`${this.apiUrl}/events/${this.editingEventId}`, formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                }
+            });
+
+            const eventIndex = this.userEvents.findIndex(e => e._id === this.editingEventId);
+            if (eventIndex !== -1) {
+                this.userEvents[eventIndex] = response.data.event;
+            }
+
+            this.showNotification('Event updated successfully!', 'success');
+        } else {
+            // Create event
+            response = await axios.post(`${this.apiUrl}/events`, formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                }
+            });
+
+            this.userEvents.push(response.data.event);
+            this.showNotification('Event created successfully!', 'success');
+        }
+
+        this.showEditEvent = false;
+        this.isEditMode = false;
+        this.editingEventId = null;
+        this.originalEventData = null;
+        this.resetEventForm();
+
+    } catch (error) {
+        console.error('Event error:', error);
+        if (error.response) {
+            this.showNotification(error.response.data?.error || 'Failed to save event', 'error');
+        } else {
+            this.showNotification(error.message || 'Failed to save event', 'error');
+        }
+    } finally {
+        this.authLoading = false;
+    }
+},
+
+// ✅ Fixed here
+async createOrUpdateEvent() {
+    await this.createEvent();
+},
+
 
                 editEvent(event) {
                     this.isEditMode = true;
