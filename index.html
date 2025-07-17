@@ -1350,46 +1350,9 @@ async deleteEvent(event) {
                         this.authLoading = false;
                     }
                 },
-                async testBackendConnection() {
-    try {
-        const apiUrl = this.apiUrl || 'https://cst-3990-backend-f533.onrender.com/api';
-        console.log('Testing backend connection to:', `${apiUrl}/health`);
-        
-        const response = await axios.get(`${apiUrl}/health`, {
-            timeout: 10000
-        });
-        
-        console.log('Backend health check response:', response.data);
-        this.showNotification('Backend connection successful!', 'success');
-        return true;
-    } catch (error) {
-        console.error('Backend connection test failed:', error);
-        this.showNotification('Backend connection failed!', 'error');
-        return false;
-    }
-},
+                
 
-debugAuthentication() {
-    const token = localStorage.getItem('eventhive_token');
-    console.log('=== AUTH DEBUG ===');
-    console.log('Token exists:', !!token);
-    
-    if (token) {
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            console.log('Token payload:', payload);
-            console.log('User role:', payload.role);
-            console.log('User ID:', payload.userId);
-            console.log('Token expiry:', new Date(payload.exp * 1000));
-            console.log('Token valid:', new Date(payload.exp * 1000) > new Date());
-        } catch (e) {
-            console.log('Token parsing failed:', e);
-        }
-    }
-    
-    console.log('Current user:', this.currentUser);
-    console.log('API URL:', this.apiUrl);
-},
+
                 
                 logout() {
                     this.currentUser = null;
